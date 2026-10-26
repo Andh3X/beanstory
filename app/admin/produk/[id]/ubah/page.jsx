@@ -1,15 +1,29 @@
 import { notFound } from "next/navigation";
 import NavAdmin from "@/components/NavAdmin";
 import FormProduk from "@/components/FormProduk";
-import CatatanBelumAktif from "@/components/CatatanBelumAktif";
-import { cariProdukContoh } from "@/lib/data-contoh";
+import Tombol from "@/components/Tombol";
+import { ubahProduk } from "@/app/admin/actions";
+import { requireAdmin } from "@/lib/supabase/admin";
+import { idProdukValid } from "@/lib/produk";
 
-// US-09 (bonus di jalur offline): ubah produk.
 export default async function HalamanUbahProduk({ params }) {
+  const supabase = await requireAdmin();
   const { id } = await params;
-  const produk = cariProdukContoh(id);
+  if (!idProdukValid(id)) {
+    notFound();
+  }
 
-  if (!produk) {
+  let produk;
+  let gagalMemuat = false;
+  try {
+    const { data, error } = await supabase.from("produk").select("*").eq("id", id).maybeSingle();
+    produk = data;
+    gagalMemuat = Boolean(error);
+  } catch {
+    gagalMemuat = true;
+  }
+
+  if (!gagalMemuat && !produk) {
     notFound();
   }
 
@@ -17,8 +31,16 @@ export default async function HalamanUbahProduk({ params }) {
     <div className="flex flex-col gap-6 py-8">
       <NavAdmin />
       <h1 className="text-2xl font-extrabold">Ubah produk</h1>
-      <CatatanBelumAktif>Simpan perubahan belum berfungsi: lihat US-09.</CatatanBelumAktif>
-      <FormProduk produk={produk} labelTombol="Simpan perubahan" />
+      {gagalMemuat ? (
+        <div className="flex flex-col items-start gap-4">
+          <p role="alert" className="text-sm text-bahaya">
+            Produk gagal dimuat. Periksa koneksi dan izin akun, lalu coba lagi.
+          </p>
+          <Tombol href="/admin" varian="garis">Kembali ke daftar produk</Tombol>
+        </div>
+      ) : (
+        <FormProduk action={ubahProduk.bind(null, id)} produk={produk} labelTombol="Simpan perubahan" />
+      )}
     </div>
   );
 }

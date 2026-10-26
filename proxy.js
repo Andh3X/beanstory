@@ -10,38 +10,48 @@ export async function proxy(request) {
   const supabasePublishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
 
   if (!supabaseUrl || !supabasePublishableKey) {
-    throw new Error(
-      "SUPABASE_URL atau SUPABASE_PUBLISHABLE_KEY belum disetel di environment variable."
+    return NextResponse.redirect(
+      new URL("/admin/login?error=service", request.url)
     );
   }
 
   let response = NextResponse.next({ request });
-  const supabase = createServerClient(supabaseUrl, supabasePublishableKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
+  try {
+    const supabase = createServerClient(supabaseUrl, supabasePublishableKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => {
+            request.cookies.set(name, value);
+          });
+          response = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
+        },
       },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => {
-          request.cookies.set(name, value);
-        });
-        response = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, options);
-        });
-      },
-    },
-  });
+    });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    const { data, error } = await supabase.auth.getUser();
 
-  if (!user) {
-    return NextResponse.redirect(new URL("/admin/login", request.url));
+    if (error) {
+      return NextResponse.redirect(
+        new URL("/admin/login?error=service", request.url)
+      );
+    }
+
+    if (!data.user) {
+      return NextResponse.redirect(new URL("/admin/login", request.url));
+    }
+
+    return response;
+  } catch {
+    return NextResponse.redirect(
+      new URL("/admin/login?error=service", request.url)
+    );
   }
-
-  return response;
 }
 
 export const config = {

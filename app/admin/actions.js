@@ -1,7 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createSessionClient } from "@/lib/supabase/session";
+import { requireAdmin } from "@/lib/supabase/admin";
+import { bacaFormProduk, idProdukValid } from "@/lib/produk";
 
 export async function masukAdmin(formData) {
   const email = formData.get("email");
@@ -81,4 +84,86 @@ export async function ubahPasswordAdmin(formData) {
   }
 
   redirect("/admin/password?status=success");
+}
+
+function perbaruiHalamanProduk(id) {
+  revalidatePath("/admin");
+  revalidatePath("/");
+  revalidatePath(`/produk/${id}`);
+  revalidatePath(`/admin/produk/${id}/ubah`);
+}
+
+async function simpanProduk(id, formData, mengubah) {
+  // Pemeriksaan ini tetap berjalan jika Server Action dipanggil langsung.
+  const supabase = await requireAdmin();
+  if (mengubah && !idProdukValid(id)) {
+    return { error: "ID produk tidak valid. Kembali ke daftar produk lalu coba lagi." };
+  }
+
+  const hasil = bacaFormProduk(formData);
+  if (hasil.error) {
+    return { error: hasil.error };
+  }
+
+  let produk;
+  try {
+    const query = mengubah
+      ? supabase.from("produk").update(hasil.data).eq("id", id)
+      : supabase.from("produk").insert(hasil.data);
+    const { data, error } = await query.select("id").maybeSingle();
+
+    if (error) {
+      return { error: "Produk gagal disimpan. Periksa koneksi dan izin akun, lalu coba lagi." };
+    }
+    produk = data;
+  } catch {
+    return { error: "Produk gagal disimpan. Periksa koneksi lalu coba lagi." };
+  }
+
+  if (!produk) {
+    return { error: "Produk tidak ditemukan atau tidak dapat disimpan. Muat ulang daftar produk." };
+  }
+
+  perbaruiHalamanProduk(produk.id);
+  redirect(`/admin?status=${mengubah ? "updated" : "created"}`);
+}
+
+export async function tambahProduk(_state, formData) {
+  return simpanProduk(null, formData, false);
+}
+
+export async function ubahProduk(id, _state, formData) {
+  return simpanProduk(id, formData, true);
+}
+
+export async function hapusProduk(id, _state, _formData) {
+  const supabase = await requireAdmin();
+
+  if (!idProdukValid(id)) {
+    return { error: "ID produk tidak valid. Muat ulang daftar produk." };
+  }
+
+  let produk;
+  try {
+    const { data, error } = await supabase
+      .from("produk")
+      .delete()
+      .eq("id", id)
+      .select("id")
+      .maybeSingle();
+
+    if (error) {
+      return { error: "Produk gagal dihapus. Periksa koneksi dan izin akun, lalu coba lagi." };
+    }
+    produk = data;
+  } catch {
+    return { error: "Produk gagal dihapus. Periksa koneksi lalu coba lagi." };
+  }
+
+  if (!produk) {
+    return { error: "Produk tidak ditemukan atau tidak dapat dihapus. Muat ulang daftar produk." };
+  }
+
+  perbaruiHalamanProduk(produk.id);
+  redirect("/admin?status=deleted");
 }
