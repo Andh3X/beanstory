@@ -35,3 +35,50 @@ export async function keluarAdmin() {
   await supabase.auth.signOut();
   redirect("/admin/login");
 }
+
+export async function ubahPasswordAdmin(formData) {
+  let supabase;
+
+  try {
+    supabase = await createSessionClient();
+  } catch {
+    redirect("/admin/password?status=session-error");
+  }
+
+  let hasilSesi;
+
+  try {
+    hasilSesi = await supabase.auth.getUser();
+  } catch {
+    redirect("/admin/password?status=session-error");
+  }
+
+  if (hasilSesi.error || !hasilSesi.data.user) {
+    redirect("/admin/login");
+  }
+
+  const password = formData.get("password_baru");
+  const konfirmasiPassword = formData.get("konfirmasi_password");
+
+  if (typeof password !== "string" || password.length < 8) {
+    redirect("/admin/password?status=too-short");
+  }
+
+  if (typeof konfirmasiPassword !== "string" || password !== konfirmasiPassword) {
+    redirect("/admin/password?status=mismatch");
+  }
+
+  let error;
+
+  try {
+    ({ error } = await supabase.auth.updateUser({ password }));
+  } catch {
+    redirect("/admin/password?status=update-error");
+  }
+
+  if (error) {
+    redirect("/admin/password?status=update-error");
+  }
+
+  redirect("/admin/password?status=success");
+}

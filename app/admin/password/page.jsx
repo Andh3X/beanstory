@@ -1,11 +1,36 @@
 import NavAdmin from "@/components/NavAdmin";
 import Input from "@/components/Input";
 import Tombol from "@/components/Tombol";
-import CatatanBelumAktif from "@/components/CatatanBelumAktif";
+import { ubahPasswordAdmin } from "@/app/admin/actions";
 
-// US-05: form ganti password belum berfungsi.
-// Tugas peserta: admin yang sudah login bisa mengganti password-nya, diproses di server.
-export default function HalamanGantiPassword() {
+const pesanStatus = {
+  success: { teks: "Password berhasil diperbarui.", kelas: "text-utama", role: "status" },
+  "too-short": {
+    teks: "Password baru harus terdiri dari minimal 8 karakter.",
+    kelas: "text-bahaya",
+    role: "alert",
+  },
+  mismatch: {
+    teks: "Konfirmasi password tidak sama dengan password baru.",
+    kelas: "text-bahaya",
+    role: "alert",
+  },
+  "session-error": {
+    teks: "Sesi admin tidak dapat diverifikasi. Silakan coba lagi atau login kembali.",
+    kelas: "text-bahaya",
+    role: "alert",
+  },
+  "update-error": {
+    teks: "Password gagal diperbarui. Periksa koneksi lalu coba lagi.",
+    kelas: "text-bahaya",
+    role: "alert",
+  },
+};
+
+export default async function HalamanGantiPassword({ searchParams }) {
+  const { status } = (await searchParams) || {};
+  const pesan = pesanStatus[status];
+
   return (
     <div className="flex flex-col gap-6 py-8">
       <NavAdmin />
@@ -15,7 +40,12 @@ export default function HalamanGantiPassword() {
           Ganti password bawaan segera setelah pertama kali masuk. Minimal 8 karakter.
         </p>
       </div>
-      <form className="flex max-w-sm flex-col gap-4">
+      {pesan ? (
+        <p role={pesan.role} className={`max-w-sm text-sm ${pesan.kelas}`}>
+          {pesan.teks}
+        </p>
+      ) : null}
+      <form action={ubahPasswordAdmin} className="flex max-w-sm flex-col gap-4">
         <Input
           label="Password baru"
           name="password_baru"
@@ -36,7 +66,6 @@ export default function HalamanGantiPassword() {
           Simpan password
         </Tombol>
       </form>
-      <CatatanBelumAktif>Ganti password belum berfungsi: lihat US-05.</CatatanBelumAktif>
     </div>
   );
 }
