@@ -1,12 +1,25 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import Input from "@/components/Input";
 import Tombol from "@/components/Tombol";
 import { buatDeskripsiAI } from "@/app/admin/ai-actions";
 
-export default function FormProduk({ action, produk = {}, labelTombol, fiturLanjutan = false }) {
-  const [state, formAction, pending] = useActionState(action, { error: null });
+export default function FormProduk({ action, produk = {}, kategori = [], labelTombol, fiturLanjutan = false }) {
+  const fileRef = useRef(null);
+  const [file, setFile] = useState(null);
+  const [state, formAction, pending] = useActionState(async (sebelumnya, data) => {
+    if (file) {
+      // Cegah payload besar mencapai batas framework; server memeriksa ulang.
+      if (file.size > 3 * 1024 * 1024 || file.size === 0 || !["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+        const error = "Pilih JPEG, PNG, atau WebP berukuran maksimal 3 MB.";
+        return { error, fieldErrors: { foto_file: error } };
+      }
+      data.set("foto_file", file);
+    }
+    return action(sebelumnya, data);
+  }, { error: null });
+  const errors = state.fieldErrors || {};
   const [membuatAI, setMembuatAI] = useState(false);
   const [pesanAI, setPesanAI] = useState(null);
   const [nilai, setNilai] = useState({
@@ -19,6 +32,7 @@ export default function FormProduk({ action, produk = {}, labelTombol, fiturLanj
     stok: String(produk.stok ?? ""),
     harga_diskon: String(produk.harga_diskon ?? ""),
     badge: produk.badge ?? "",
+    aktif: produk.aktif === false ? "false" : "true",
   });
 
   function gantiNilai(event) {
@@ -47,22 +61,38 @@ export default function FormProduk({ action, produk = {}, labelTombol, fiturLanj
     <form action={formAction} aria-busy={pending || membuatAI} className="flex max-w-xl flex-col gap-4">
       {state.error ? <p role="alert" className="text-sm text-bahaya">{state.error}</p> : null}
       <fieldset disabled={pending || membuatAI} className="flex min-w-0 flex-col gap-4">
-        <Input label="Nama produk" name="nama" value={nilai.nama} onChange={gantiNilai} required />
+        <Input error={errors.nama} label="Nama produk" name="nama" value={nilai.nama} onChange={gantiNilai} required />
         <Input
           label="Harga (Rp)"
           name="harga"
+          error={errors.harga}
           type="number"
-          min="0"
+          min="1"
           max="2147483647"
           step="1"
           value={nilai.harga}
           onChange={gantiNilai}
           required
         />
-        <Input label="Kategori" name="kategori" value={nilai.kategori} onChange={gantiNilai} />
+        <label className="flex flex-col gap-1.5 text-sm font-semibold">Kategori
+          <select name="kategori" value={nilai.kategori} onChange={gantiNilai} aria-invalid={Boolean(errors.kategori)} aria-describedby={errors.kategori ? "kategori-error" : undefined} className="rounded-lg border border-garis bg-latar p-3 text-teks">
+            <option value="">Tanpa kategori</option>{kategori.map((nama) => <option key={nama}>{nama}</option>)}
+          </select>
+          {errors.kategori ? <span id="kategori-error" className="text-bahaya">{errors.kategori}</span> : null}
+        </label>
+        <label className="flex flex-col gap-2 text-sm font-semibold">Status
+          <select name="aktif" value={nilai.aktif} onChange={gantiNilai} aria-invalid={Boolean(errors.aktif)} aria-describedby={errors.aktif ? "aktif-error" : undefined} className="rounded-lg border border-garis bg-latar p-3 text-teks"><option value="true">Aktif</option><option value="false">Nonaktif</option></select>
+          {errors.aktif ? <span id="aktif-error" className="text-bahaya">{errors.aktif}</span> : null}
+        </label>
+        <label className="flex flex-col gap-2 text-sm font-semibold">Upload foto utama (JPEG, PNG, WebP; maksimal 3 MB)
+          <input ref={fileRef} name="foto_file" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setFile(event.target.files?.[0] || null)} aria-invalid={Boolean(errors.foto_file)} aria-describedby="foto_file-info" className="max-w-full rounded-lg border border-garis p-3" />
+          <span id="foto_file-info" className={errors.foto_file ? "text-bahaya" : "font-normal text-teks-lembut"}>{errors.foto_file || (file ? `Dipilih: ${file.name}. File ini menggantikan link foto saat disimpan.` : "Upload menggantikan link foto utama jika keduanya diisi.")}</span>
+          {file ? <button type="button" className="self-start text-utama underline" onClick={() => { setFile(null); if (fileRef.current) fileRef.current.value = ""; }}>Batalkan file</button> : null}
+        </label>
         <Input
           label="Link foto"
           name="foto_url"
+          error={errors.foto_url}
           placeholder="https://... atau /produk/nama-file.svg"
           value={nilai.foto_url}
           onChange={gantiNilai}
@@ -78,15 +108,16 @@ export default function FormProduk({ action, produk = {}, labelTombol, fiturLanj
         {fiturLanjutan ? (
           <fieldset className="flex min-w-0 flex-col gap-4 rounded-xl border border-garis p-4">
             <legend className="px-2 font-semibold">Galeri, stok, dan promo</legend>
-            <Input label="Link foto tambahan (satu per baris, maksimal 9)" name="foto_tambahan" textarea value={nilai.foto_tambahan} onChange={gantiNilai} />
-            <Input label="Stok (kosongkan jika tidak dibatasi)" name="stok" type="number" min="0" max="2147483647" step="1" value={nilai.stok} onChange={gantiNilai} />
+            <Input error={errors.foto_tambahan} label="Link foto tambahan (satu per baris, maksimal 9)" name="foto_tambahan" textarea value={nilai.foto_tambahan} onChange={gantiNilai} />
+            <Input error={errors.stok} label="Stok (kosongkan jika tidak dibatasi)" name="stok" type="number" min="0" max="2147483647" step="1" value={nilai.stok} onChange={gantiNilai} />
             <p className="text-xs text-teks-lembut">Isi 0 untuk menandai produk habis dan menonaktifkan pemesanan.</p>
-            <Input label="Harga diskon (Rp, boleh kosong)" name="harga_diskon" type="number" min="0" max="2147483647" step="1" value={nilai.harga_diskon} onChange={gantiNilai} />
+            <Input error={errors.harga_diskon} label="Harga diskon (Rp, boleh kosong)" name="harga_diskon" type="number" min="0" max="2147483647" step="1" value={nilai.harga_diskon} onChange={gantiNilai} />
             <label className="flex flex-col gap-1.5 text-sm font-semibold">
               Label produk
-              <select name="badge" value={nilai.badge} onChange={gantiNilai} className="rounded-lg border border-garis bg-latar px-3 py-2.5 text-base text-teks">
+              <select name="badge" value={nilai.badge} onChange={gantiNilai} aria-invalid={Boolean(errors.badge)} aria-describedby={errors.badge ? "badge-error" : undefined} className="rounded-lg border border-garis bg-latar px-3 py-2.5 text-base text-teks">
                 <option value="">Tanpa label</option><option value="Baru">Baru</option><option value="Terlaris">Terlaris</option>
               </select>
+              {errors.badge ? <span id="badge-error" className="text-bahaya">{errors.badge}</span> : null}
             </label>
           </fieldset>
         ) : null}

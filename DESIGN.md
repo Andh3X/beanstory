@@ -11,12 +11,17 @@ Ikuti panduan ini setiap kali membuat atau mengubah tampilan, supaya semua halam
 | `garis` | `#dde5e0` | Garis tepi dan pemisah |
 | `teks` | `#1b2420` | Teks utama |
 | `teks-lembut` | `#5b6a62` | Teks pendukung: kategori, keterangan |
-| `utama` | `#1f6b4f` | Tombol utama, tautan aktif, nama toko |
+| `utama` | `#1f6b4f` | Tautan aktif, nama toko |
+| `tombol` | `#1f6b4f` | Latar tombol utama dengan teks putih |
 | `utama-gelap` | `#154d39` | Tombol utama saat disorot |
 | `harga` / `harga-latar` | `#7a4e09` / `#fbefd8` | Label harga |
 | `bahaya` | `#b42318` | Aksi hapus dan pesan error |
 
 Pakai sebagai kelas Tailwind, misalnya `bg-utama`, `text-teks-lembut`, `border-garis`. Jangan menulis kode warna langsung di kelas.
+
+Mode gelap memakai `html[data-theme="gelap"]` untuk mengganti token pada `app/globals.css`. Warna tautan `utama` lebih terang di mode gelap, sedangkan `tombol` tetap cukup gelap agar teks putih terbaca. Gunakan `bg-tombol` untuk tombol utama. `public/theme-init.js` menerapkan pilihan tersimpan atau preferensi sistem sebelum tampilan awal; kontrol di header menyimpan pilihan `beanstory:tema:v1`.
+
+Navigasi membungkus pada layar kecil. Form memakai label serta error per field dengan `aria-invalid`/`aria-describedby`; konfirmasi hapus tetap inline. Tabel admin boleh digeser di dalam wadahnya dan perbandingan memakai dua kolom yang dapat menyusut.
 
 ## Huruf
 

@@ -8,20 +8,28 @@ import KartuProduk from "@/components/KartuProduk";
 import { fotoProduk, idProdukValid } from "@/lib/produk";
 import { ambilProdukTerkait } from "@/lib/katalog";
 import { createServerClient } from "@/lib/supabase/server";
+import { ambilProdukPublik } from "@/lib/produk-server";
+import { absolut } from "@/lib/site";
+import { toko } from "@/lib/toko";
+import AksiPengunjung from "@/components/AksiPengunjung";
+import UlasanProduk from "@/components/UlasanProduk";
 
-export default async function HalamanDetailProduk({ params }) {
+export const dynamic = "force-dynamic";
+export async function generateMetadata({ params }) {
+  const { id } = await params;
+  const produk = await ambilProdukPublik(id);
+  if (!produk) notFound();
+  const description = (produk.deskripsi || `${produk.nama} tersedia di ${toko.nama}.`).slice(0, 160);
+  const url = absolut(`/produk/${produk.id}`);
+  return { title: `${produk.nama} | ${toko.nama}`, description, alternates: { canonical: url }, openGraph: { title: produk.nama, description, url, type: "website", images: produk.foto_url ? [{ url: absolut(produk.foto_url), alt: produk.nama }] : [] } };
+}
+
+export default async function HalamanDetailProduk({ params, searchParams }) {
   const { id } = await params;
   if (!idProdukValid(id)) notFound();
   const supabase = createServerClient();
-  const { data: produk, error } = await supabase
-    .from("produk")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error("Produk belum dapat dimuat. Silakan coba lagi.");
-  }
+  const produk = await ambilProdukPublik(id);
+  const pencarian = (await searchParams) || {};
 
   if (!produk) {
     notFound();
@@ -50,6 +58,7 @@ export default async function HalamanDetailProduk({ params }) {
         {Number.isInteger(produk.stok) && produk.stok > 0 ? <p className="text-sm text-teks-lembut">Stok tersedia: {produk.stok}</p> : null}
         <p className="max-w-prose leading-relaxed text-teks-lembut">{produk.deskripsi}</p>
         <TombolWhatsApp key={produk.id} produk={produk} />
+        <AksiPengunjung key={`aksi-${produk.id}`} id={String(produk.id)} nama={produk.nama} />
       </div>
     </article>
     {produkTerkait.length || gagalTerkait ? (
@@ -60,6 +69,7 @@ export default async function HalamanDetailProduk({ params }) {
         )}
       </section>
     ) : null}
+    <UlasanProduk id={produk.id} halaman={pencarian.ulasan} />
     </>
   );
 }

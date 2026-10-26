@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createSessionClient } from "@/lib/supabase/session";
 import { requireAdmin } from "@/lib/supabase/admin";
 import { bacaFormProduk, idProdukValid } from "@/lib/produk";
+import { unggahFoto, bersihkanUpload } from "@/lib/upload";
 
 export async function masukAdmin(formData) {
   const email = formData.get("email");
@@ -91,6 +92,7 @@ function perbaruiHalamanProduk(id) {
   revalidatePath("/");
   revalidatePath(`/produk/${id}`);
   revalidatePath(`/admin/produk/${id}/ubah`);
+  revalidatePath("/sitemap.xml");
 }
 
 async function simpanProduk(id, formData, mengubah) {
@@ -100,27 +102,42 @@ async function simpanProduk(id, formData, mengubah) {
     return { error: "ID produk tidak valid. Kembali ke daftar produk lalu coba lagi." };
   }
 
+  if (!formData || typeof formData.get !== "function") return { error: "Formulir produk tidak valid. Muat ulang halaman lalu coba lagi." };
+  const file = formData.get("foto_file");
+  if (file && typeof file !== "string" && file.size > 0) formData.set("foto_url", "");
   const hasil = bacaFormProduk(formData);
   if (hasil.error) {
-    return { error: hasil.error };
+    return hasil;
   }
 
   let produk;
+  let upload = {};
   try {
+    if (hasil.data.kategori) {
+      const kategori = await supabase.from("kategori").select("nama").eq("nama", hasil.data.kategori).maybeSingle();
+      if (kategori.error) return { error: "Kategori gagal diperiksa. Coba lagi." };
+      if (!kategori.data) return { error: "Kategori tidak tersedia.", fieldErrors: { kategori: "Pilih kategori yang tersedia atau tanpa kategori." } };
+    }
+    upload = await unggahFoto(supabase, file);
+    if (upload.error) return { error: upload.error, fieldErrors: { foto_file: upload.error } };
+    if (upload.url) hasil.data.foto_url = upload.url;
     const query = mengubah
       ? supabase.from("produk").update(hasil.data).eq("id", id)
       : supabase.from("produk").insert(hasil.data);
     const { data, error } = await query.select("id").maybeSingle();
 
     if (error) {
+      await bersihkanUpload(supabase, upload.nama);
       return { error: "Produk gagal disimpan. Periksa koneksi dan izin akun, lalu coba lagi." };
     }
     produk = data;
   } catch {
+    await bersihkanUpload(supabase, upload.nama);
     return { error: "Produk gagal disimpan. Periksa koneksi lalu coba lagi." };
   }
 
   if (!produk) {
+    await bersihkanUpload(supabase, upload.nama);
     return { error: "Produk tidak ditemukan atau tidak dapat disimpan. Muat ulang daftar produk." };
   }
 

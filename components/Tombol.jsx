@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 const gaya = {
-  utama: "bg-utama text-white hover:bg-utama-gelap",
+  utama: "bg-tombol text-white hover:bg-utama-gelap",
   garis: "border border-garis bg-latar text-teks hover:border-utama hover:text-utama",
   bahaya: "border border-garis bg-latar text-bahaya hover:border-bahaya",
 };

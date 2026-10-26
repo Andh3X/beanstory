@@ -68,6 +68,8 @@ Urutan yang disarankan: US-01, US-02, US-03, US-04, US-05, US-06, lalu fitur bon
 
 ## Sebelum mengumpulkan
 
+Bonus US-21–US-40 (keranjang, favorit, tema, SEO, kategori/upload, ulasan/moderasi, klik WhatsApp) tersedia di kode. **Jalankan migrasi 002 sebelum deployment kode baru.** Ikuti [panduan aktivasi dan pengujian](docs/bonus-us21-us40.md); migrasi live dan pemeriksaan Production belum dilakukan agent. Pilihan browser tidak menyimpan harga/stok, seluruh akses database tetap melalui server.
+
 Panduan aktivasi dan pengujian fitur bonus US-11–US-20 ada di [docs/bonus-us11-us20.md](docs/bonus-us11-us20.md). US-14 memerlukan `GEMINI_API_KEY`; US-18–US-20 memerlukan migrasi SQL tambahan. CRUD dasar tetap bekerja sebelum migrasi.
 
 1. Jalankan semua poin di `docs/checklist-keamanan.md` dan `docs/checklist-pengujian.md` pada link Vercel.

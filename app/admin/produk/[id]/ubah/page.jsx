@@ -5,6 +5,7 @@ import Tombol from "@/components/Tombol";
 import { ubahProduk } from "@/app/admin/actions";
 import { requireAdmin } from "@/lib/supabase/admin";
 import { idProdukValid } from "@/lib/produk";
+import { ambilKategori } from "@/lib/katalog";
 
 export default async function HalamanUbahProduk({ params }) {
   const supabase = await requireAdmin();
@@ -14,8 +15,10 @@ export default async function HalamanUbahProduk({ params }) {
   }
 
   let produk;
+  let kategori = [];
   let gagalMemuat = false;
   try {
+    kategori = await ambilKategori(supabase);
     const { data, error } = await supabase.from("produk").select("*").eq("id", id).maybeSingle();
     produk = data;
     gagalMemuat = Boolean(error);
@@ -39,7 +42,7 @@ export default async function HalamanUbahProduk({ params }) {
           <Tombol href="/admin" varian="garis">Kembali ke daftar produk</Tombol>
         </div>
       ) : (
-        <FormProduk key={produk.id} action={ubahProduk.bind(null, id)} produk={produk} labelTombol="Simpan perubahan"
+        <FormProduk key={produk.id} action={ubahProduk.bind(null, id)} produk={produk} kategori={kategori} labelTombol="Simpan perubahan"
           fiturLanjutan={["foto_tambahan", "stok", "harga_diskon", "badge"].every((kolom) => Object.hasOwn(produk, kolom))} />
       )}
     </div>

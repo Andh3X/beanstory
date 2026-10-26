@@ -48,6 +48,10 @@ test("service worker tidak menangani admin, POST Server Action, cross-origin, at
   for (const request of [
     { url: "https://example.com/admin", method: "GET", mode: "navigate" },
     { url: "https://example.com/admin/produk/baru", method: "GET", mode: "navigate" },
+    { url: "https://example.com/api/produk/seleksi", method: "POST", mode: "cors" },
+    { url: "https://example.com/api/klik-whatsapp", method: "POST", mode: "cors" },
+    { url: "https://example.com/api/produk/seleksi", method: "GET", mode: "cors" },
+    { url: "https://example.com/media/produk/foto.jpg", method: "GET", mode: "cors" },
     { url: "https://example.com/", method: "POST", mode: "cors" },
     { url: "https://other.example/", method: "GET", mode: "navigate" },
     { url: "https://example.com/?_rsc=abc", method: "GET", mode: "cors" },
@@ -57,11 +61,13 @@ test("service worker tidak menangani admin, POST Server Action, cross-origin, at
 
 test("katalog selalu memakai jaringan; saat offline hanya menampilkan halaman koneksi", async () => {
   for (const offline of [false, true]) {
-    const app = await worker({ offline });
-    let response;
-    app.handlers.fetch({ request: { url: "https://example.com/", method: "GET", mode: "navigate" }, respondWith: (value) => { response = value; } });
-    assert.equal(await response, offline ? "halaman-offline" : "respons-jaringan");
-    assert.ok(!app.calls.some(([kind]) => kind === "put"));
+    for (const path of ["/", "/keranjang", "/favorit", "/bandingkan", "/produk/1"]) {
+      const app = await worker({ offline });
+      let response;
+      app.handlers.fetch({ request: { url: `https://example.com${path}`, method: "GET", mode: "navigate" }, respondWith: (value) => { response = value; } });
+      assert.equal(await response, offline ? "halaman-offline" : "respons-jaringan");
+      assert.ok(!app.calls.some(([kind]) => kind === "put"));
+    }
   }
 });
 

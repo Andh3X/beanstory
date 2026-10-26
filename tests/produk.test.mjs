@@ -7,10 +7,11 @@ const root = new URL("../", import.meta.url);
 
 // Jalankan Server Action asli dengan batas Next.js/Supabase pengganti.
 // Tidak memakai kredensial atau mengubah database toko.
-async function aplikasi({ login = true, authError = false, authThrow = false, queryError = false, queryThrow = false } = {}) {
+async function aplikasi({ login = true, authError = false, authThrow = false, queryError = false, queryThrow = false, uploadError = false, uploadOk = false } = {}) {
   const rows = new Map([["1", { id: 1, nama: "Produk lama", harga: 1000 }]]);
   const events = [];
   const cache = [];
+  const uploads = [], cleanup = [];
   let nextId = 2;
   const client = {
     auth: {
@@ -22,6 +23,7 @@ async function aplikasi({ login = true, authError = false, authThrow = false, qu
     },
     from(table) {
       events.push("query");
+      if (table === "kategori") return { select() { return this; }, eq(_col, nama) { this.nama = nama; return this; }, async maybeSingle() { return { data: queryError || queryThrow ? null : { nama: this.nama }, error: queryError || queryThrow ? new Error("kategori gagal") : null }; } };
       assert.equal(table, "produk");
       let operation;
       let values;
@@ -64,6 +66,7 @@ async function aplikasi({ login = true, authError = false, authThrow = false, qu
   stub("next/navigation", { redirect(location) { throw Object.assign(new Error("redirect"), { location }); } });
   stub("next/cache", { revalidatePath(path) { cache.push(path); } });
   stub("session", { createSessionClient: async () => client });
+  stub("@/lib/upload", { unggahFoto: async (_db, file) => { if (!file?.size) return {}; uploads.push(file.name); return uploadError ? { error: "Upload ditolak" } : uploadOk ? { nama: "uuid.jpg", url: "https://beanstory.vercel.app/media/produk/uuid.jpg" } : {}; }, bersihkanUpload: async (_db, nama) => { if (nama) cleanup.push(nama); } });
 
   async function load(name) {
     if (modules.has(name)) return modules.get(name);
@@ -82,7 +85,7 @@ async function aplikasi({ login = true, authError = false, authThrow = false, qu
 
   const actions = await load("actions");
   await actions.evaluate();
-  return { actions: actions.namespace, produk: modules.get("produk").namespace, rows, events, cache };
+  return { actions: actions.namespace, produk: modules.get("produk").namespace, rows, events, cache, uploads, cleanup };
 }
 
 function form(changes = {}) {
@@ -113,8 +116,8 @@ test("tambah, ubah, hapus: data tersimpan, hanya ID tujuan berubah, cache diperb
   await redirected(() => app.actions.hapusProduk("2", null, new FormData()), "/admin?status=deleted");
   assert.equal(app.rows.has("2"), false);
   assert.equal(app.rows.has("1"), true);
-  assert.deepEqual(app.events, ["auth", "query", "auth", "query", "auth", "query"]);
-  assert.deepEqual(app.cache, Array(3).fill(["/admin", "/", "/produk/2", "/admin/produk/2/ubah"]).flat());
+  assert.deepEqual(app.events, ["auth", "query", "query", "auth", "query", "query", "auth", "query"]);
+  assert.deepEqual(app.cache, Array(3).fill(["/admin", "/", "/produk/2", "/admin/produk/2/ubah", "/sitemap.xml"]).flat());
 });
 
 for (const mode of [{ login: false }, { authError: true }, { authThrow: true }]) {
@@ -133,7 +136,7 @@ for (const mode of [{ login: false }, { authError: true }, { authThrow: true }])
 test("validasi server menolak nama kosong, harga salah, dan link foto tidak aman", async () => {
   const app = await aplikasi();
   const invalid = [
-    { nama: "   " }, { harga: "" }, { harga: " " }, { harga: "-1" },
+    { nama: "   " }, { harga: "0" }, { harga: "" }, { harga: " " }, { harga: "-1" },
     { harga: "1.5" }, { harga: "1e3" }, { harga: "NaN" }, { harga: "Infinity" },
     { harga: "2147483648" }, { foto_url: "javascript:alert(1)" },
     { foto_url: "//example.com/foto.png" },
@@ -153,12 +156,12 @@ test("validasi server menolak nama kosong, harga salah, dan link foto tidak aman
   assert.equal(app.cache.length, 0);
 });
 
-test("harga nol dan batas integer diterima; kolom opsional boleh kosong", async () => {
+test("harga positif dan batas integer diterima; kolom opsional boleh kosong", async () => {
   const app = await aplikasi();
-  for (const harga of ["0", "2147483647"]) {
+  for (const harga of ["1", "2147483647"]) {
     await redirected(() => app.actions.tambahProduk(null, form({ harga, kategori: "", foto_url: "", deskripsi: "" })), "/admin?status=created");
   }
-  assert.equal(app.rows.get("2").harga, 0);
+  assert.equal(app.rows.get("2").harga, 1);
   assert.equal(app.rows.get("2").foto_url, null);
   assert.equal(app.rows.get("3").harga, 2147483647);
 });
@@ -229,4 +232,30 @@ test("validasi bonus menolak stok negatif, promo tidak valid, serta galeri berle
   }
   assert.equal(app.events.includes("query"), false);
   assert.equal(app.rows.size, 1);
+});
+
+test("upload menggantikan link; file baru dibersihkan saat penyimpanan gagal atau ID hilang", async () => {
+  const data = () => { const fd = form({ kategori: "", foto_url: "link-tidak-valid" }); fd.set("foto_file", new Blob([new Uint8Array([255,216,255])], { type: "image/jpeg" }), "kopi.jpg"); return fd; };
+  const app = await aplikasi({ uploadOk: true });
+  await redirected(() => app.actions.tambahProduk(null, data()), "/admin?status=created");
+  assert.equal(app.rows.get("2").foto_url, "https://beanstory.vercel.app/media/produk/uuid.jpg"); assert.equal(app.cleanup.length, 0);
+  for (const mode of [{ queryError: true }, { queryThrow: true }, {}]) {
+    const gagal = await aplikasi({ ...mode, uploadOk: true });
+    const hasil = await gagal.actions.ubahProduk("999", null, data());
+    assert.ok(hasil.error); assert.deepEqual(gagal.cleanup, ["uuid.jpg"]); assert.equal(gagal.cache.length, 0);
+  }
+  const ditolak = await aplikasi({ uploadError: true });
+  assert.ok((await ditolak.actions.tambahProduk(null, data())).fieldErrors.foto_file);
+  assert.equal(ditolak.rows.size, 1); assert.equal(ditolak.cache.length, 0);
+  const tanpaSesi = await aplikasi({ login: false, uploadOk: true });
+  await redirected(() => tanpaSesi.actions.tambahProduk(null, data()), "/admin/login"); assert.equal(tanpaSesi.uploads.length, 0);
+});
+
+test("error validasi dihubungkan dengan field yang salah", async () => {
+  const app = await aplikasi();
+  for (const [field, value] of [["nama", " "], ["harga", "0"], ["foto_url", "javascript:alert(1)"], ["stok", "-1"], ["harga_diskon", "99999"], ["foto_tambahan", "javascript:evil"]]) {
+    const hasil = await app.actions.tambahProduk(null, form({ [field]: value })); assert.equal(typeof hasil.fieldErrors[field], "string");
+  }
+  const banyak = await app.actions.tambahProduk(null, form({ nama: "", harga: "0", stok: "-1", aktif: "palsu" }));
+  for (const field of ["nama", "harga", "stok", "aktif"]) assert.equal(typeof banyak.fieldErrors[field], "string");
 });

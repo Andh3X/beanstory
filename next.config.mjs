@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: { serverActions: { bodySizeLimit: "4mb" } },
   // Supaya deploy tidak gagal hanya karena error tipe kecil selama workshop.
   typescript: { ignoreBuildErrors: true },
   async headers() {

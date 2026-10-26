@@ -1,0 +1,3 @@
+export default function Skeleton({ detail = false }) {
+  return <div role="status" aria-label="Memuat halaman" className="py-8"><p className="sr-only">Memuat halaman...</p><div aria-hidden="true" className={`grid gap-4 motion-safe:animate-pulse ${detail ? "md:grid-cols-2" : "grid-cols-2 md:grid-cols-3"}`}>{Array.from({ length: detail ? 2 : 6 }, (_, i) => <div key={i} className="rounded-xl border border-garis p-4"><div className="aspect-square rounded-lg bg-permukaan" /><div className="mt-4 h-5 rounded bg-permukaan" /><div className="mt-3 h-4 w-2/3 rounded bg-permukaan" /></div>)}</div></div>;
+}

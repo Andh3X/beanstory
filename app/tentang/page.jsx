@@ -1,0 +1,3 @@
+import { toko } from "@/lib/toko";
+export const metadata = { title: "Tentang toko" };
+export default function Tentang() { return <article className="flex max-w-prose flex-col gap-5 py-10"><h1 className="text-3xl font-extrabold">Tentang {toko.nama}</h1><p>{toko.tagline}</p><h2 className="text-xl font-bold">Kunjungi dan hubungi kami</h2><address className="not-italic">{toko.alamat}</address><p>{toko.jamBuka}</p><a href={`https://wa.me/${toko.nomorWhatsApp}`} target="_blank" rel="noopener noreferrer" className="text-utama underline">WhatsApp: +{toko.nomorWhatsApp}</a></article>; }

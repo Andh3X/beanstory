@@ -7,12 +7,12 @@ const katalog = await loadSource("lib/katalog.js");
 function database({ total = 25, error = false, rows = [{ id: 1 }] } = {}) {
   const calls = [];
   return { calls, from(table) {
-    assert.equal(table, "produk");
-    const call = {};
+    assert.ok(["produk", "kategori"].includes(table));
+    const call = { table, eqs: [] };
     calls.push(call);
     const query = {
       select(columns, options) { Object.assign(call, { columns, options }); return query; },
-      eq(column, value) { call.eq = [column, value]; return query; },
+      eq(column, value) { call.eq = [column, value]; call.eqs.push([column, value]); return query; },
       neq(column, value) { call.neq = [column, value]; return query; },
       ilike(column, value) { call.ilike = [column, value]; return query; },
       order(column, options) { (call.order ||= []).push([column, options]); return query; },
@@ -34,6 +34,7 @@ test("pencarian dan kategori diterapkan pada hitungan dan query halaman", async 
   assert.equal(hasil.jumlahHalaman, 3);
   assert.equal(hasil.halaman, 2);
   for (const call of db.calls) {
+    assert.deepEqual(call.eqs[0], ["aktif", true]);
     assert.deepEqual(call.eq, ["kategori", "Minuman"]);
     assert.deepEqual(call.ilike, ["nama", "%Kopi%"]);
   }
@@ -83,6 +84,7 @@ test("produk terkait difilter kategori, mengecualikan produk saat ini, maksimal 
   const db = database();
   await katalog.ambilProdukTerkait(db, { id: 7, kategori: "Minuman" });
   assert.deepEqual(db.calls[0].eq, ["kategori", "Minuman"]);
+  assert.deepEqual(db.calls[0].eqs[0], ["aktif", true]);
   assert.deepEqual(db.calls[0].neq, ["id", 7]);
   assert.equal(db.calls[0].limit, 3);
   const kosong = database();
@@ -91,7 +93,7 @@ test("produk terkait difilter kategori, mengecualikan produk saat ini, maksimal 
 });
 
 test("pilihan kategori unik berasal dari database; error database tidak bocor", async () => {
-  const db = database({ rows: [{ kategori: "Minuman" }, { kategori: "Minuman" }, { kategori: null }, { kategori: "Kue" }] });
+  const db = database({ rows: [{ nama: "Minuman" }, { nama: "Minuman" }, { nama: null }, { nama: "Kue" }] });
   assert.deepEqual(Array.from(await katalog.ambilKategori(db)), ["Kue", "Minuman"]);
   await assert.rejects(() => katalog.ambilHalamanKatalog(database({ error: true }), katalog.opsiKatalog()), /Katalog belum dapat dimuat/);
 });

@@ -15,12 +15,31 @@
 
   --color-utama: #1f6b4f;
   --color-utama-gelap: #154d39;
+  --color-tombol: #1f6b4f;
 
   --color-harga: #7a4e09;
   --color-harga-latar: #fbefd8;
 
   --color-bahaya: #b42318;
 }
+
+html[data-theme="gelap"] {
+  color-scheme: dark;
+  --color-latar: #111b16;
+  --color-permukaan: #1c2b23;
+  --color-garis: #40594b;
+  --color-teks: #f0f6f2;
+  --color-teks-lembut: #b5c8bd;
+  --color-utama: #8ee0b6;
+  --color-tombol: #226f51;
+  --color-utama-gelap: #19583f;
+  --color-harga: #ffe0a6;
+  --color-harga-latar: #45371d;
+  --color-bahaya: #ffaaa0;
+}
+html[data-theme="terang"] { color-scheme: light; }
+body { background: var(--color-latar); }
+button:disabled { cursor: not-allowed; opacity: .6; }
 
 html {
   color: var(--color-teks);

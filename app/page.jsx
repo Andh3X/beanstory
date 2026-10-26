@@ -5,10 +5,17 @@ import Tombol from "@/components/Tombol";
 import { toko } from "@/lib/toko";
 import { createServerClient } from "@/lib/supabase/server";
 import { ambilHalamanKatalog, ambilKategori, linkKatalog, opsiKatalog } from "@/lib/katalog";
+import DaftarPilihan from "@/components/DaftarPilihan";
+import { Suspense } from "react";
+import Skeleton from "@/components/Skeleton";
 
 export const dynamic = "force-dynamic";
 
-export default async function HalamanKatalog({ searchParams }) {
+export default function HalamanKatalog(props) {
+  return <Suspense fallback={<Skeleton />}><IsiKatalog {...props} /></Suspense>;
+}
+
+async function IsiKatalog({ searchParams }) {
   const opsi = opsiKatalog(await searchParams);
   let hasil = { daftarProduk: [], total: 0, halaman: 1, jumlahHalaman: 1 };
   let kategori = [];
@@ -85,6 +92,7 @@ export default async function HalamanKatalog({ searchParams }) {
           </>
         )}
       </section>
+      <DaftarPilihan tipe="riwayat" ringkas />
     </>
   );
 }

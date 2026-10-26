@@ -1,6 +1,8 @@
 import { formatRupiah } from "@/lib/format";
 import Tombol from "@/components/Tombol";
 import FormHapusProduk from "@/components/FormHapusProduk";
+import FormAksi from "@/components/FormAksi";
+import { ubahStatusProduk } from "@/app/admin/kelola-actions";
 
 export default function TabelProduk({ daftarProduk }) {
   return (
@@ -23,6 +25,7 @@ export default function TabelProduk({ daftarProduk }) {
                 <div className="flex items-center gap-3">
                   {produk.foto_url ? <img src={produk.foto_url} alt="" className="h-10 w-10 rounded-md object-cover" /> : null}
                   <span className="font-semibold">{produk.nama}</span>
+                  <span className="text-xs text-teks-lembut">{produk.aktif ? "Aktif" : "Nonaktif"}</span>
                 </div>
               </td>
               <td className="px-4 py-3 text-teks-lembut">{produk.kategori}</td>
@@ -33,6 +36,7 @@ export default function TabelProduk({ daftarProduk }) {
                     Ubah
                   </Tombol>
                   <FormHapusProduk id={produk.id} nama={produk.nama} />
+                  <FormAksi action={ubahStatusProduk.bind(null, produk.id, !produk.aktif)} label={produk.aktif ? "Nonaktifkan" : "Aktifkan"} />
                 </div>
               </td>
             </tr>

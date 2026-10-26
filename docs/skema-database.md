@@ -37,3 +37,24 @@ Jalankan `docs/migrations/001-us18-us20.sql` di SQL Editor Supabase untuk menamb
 | `badge` | text, nullable | `Baru`, `Terlaris`, atau kosong |
 
 Kolom dan kebijakan RLS lama tetap berlaku. Panduan aktivasi dan pengujian ada di `docs/bonus-us11-us20.md`.
+
+## Tambahan bonus US-21–US-40
+
+Jalankan `docs/migrations/002-us21-us40.sql` sebelum deployment kode. Migrasi ini tidak mengganti `schema.sql` atau kebijakan RLS produk.
+
+| Objek | Isi |
+| --- | --- |
+| `produk.aktif` | Boolean wajib, default true; semua query produk publik menyaring true. |
+| `kategori` | Primary key nama; diisi dari kategori lama. `produk.kategori` tetap teks nullable, FK update cascade/delete restrict. |
+| `ulasan` | ID, produk_id, nama, rating 1–5, komentar, terlihat default true, created_at; hapus produk menghapus ulasan terkait. |
+| `klik_whatsapp` | ID, produk_id, created_at; tanpa data pribadi. Hapus produk menghapus klik terkait. |
+| `statistik_produk()` | Agregasi jumlah seluruh produk per kategori untuk sesi admin, mengikuti RLS. |
+| `ringkasan_ulasan(bigint)` | Jumlah/rata-rata seluruh ulasan terlihat pada produk aktif; hanya server service_role. |
+| `kirim_ulasan(...)`, `catat_klik_whatsapp(bigint[])` | RPC penulisan publik melalui server, eksekusi hanya service_role, memastikan produk aktif. |
+| Storage `produk` | Bucket privat, maksimal 3 MB, JPEG/PNG/WebP; insert/select/delete objek hanya sesi authenticated. |
+
+RLS aktif pada tabel baru. Admin dapat mengelola kategori/ulasan dan membaca klik. Publik tidak memiliki akses tabel atau eksekusi RPC langsung. Kunci rahasia tetap hanya di server; penulisan publik ulasan/klik adalah pengecualian eksplisit US-38/US-40. Pengelolaan toko/upload tetap memakai sesi admin.
+
+Harga lama nol tetap sah pada skema asli. Form tambah/ubah kini mensyaratkan harga positif. Foto diunggah dengan nama UUID dan disimpan sebagai URL aplikasi; route media memeriksa rujukan produk aktif sebelum mengunduh objek dari Storage.
+
+Panduan SQL Editor, aktivasi, daftar file, hasil verifikasi, dan uji Production: [bonus-us21-us40.md](bonus-us21-us40.md).
