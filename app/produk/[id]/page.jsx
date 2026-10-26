@@ -10,12 +10,15 @@ import { ambilProdukTerkait } from "@/lib/katalog";
 import { createServerClient } from "@/lib/supabase/server";
 import { ambilProdukPublik } from "@/lib/produk-server";
 import { absolut } from "@/lib/site";
-import { toko } from "@/lib/toko";
+import { ambilToko } from "@/lib/toko-server";
 import AksiPengunjung from "@/components/AksiPengunjung";
 import UlasanProduk from "@/components/UlasanProduk";
+import { linkKategori } from "@/lib/kategori-server";
+import AsistenProduk from "@/components/AsistenProduk";
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }) {
+  const toko=await ambilToko();
   const { id } = await params;
   const produk = await ambilProdukPublik(id);
   if (!produk) notFound();
@@ -30,6 +33,7 @@ export default async function HalamanDetailProduk({ params, searchParams }) {
   const supabase = createServerClient();
   const produk = await ambilProdukPublik(id);
   const pencarian = (await searchParams) || {};
+  const kategoriHref=produk ? await linkKategori(produk.kategori) : null;
 
   if (!produk) {
     notFound();
@@ -51,9 +55,10 @@ export default async function HalamanDetailProduk({ params, searchParams }) {
         <Link href="/" className="text-sm text-teks-lembut underline underline-offset-4 hover:text-utama">
           Kembali ke katalog
         </Link>
-        <p className="text-sm text-teks-lembut">{produk.kategori}</p>
+        {kategoriHref ? <Link href={kategoriHref} className="text-sm text-utama underline">{produk.kategori}</Link> : null}
         <LabelProduk produk={produk} />
         <h1 className="text-3xl font-extrabold leading-tight tracking-tight">{produk.nama}</h1>
+        {produk.varian?.length ? <p className="text-sm text-teks-lembut">Harga dasar · pilih ukuran untuk melihat harga varian</p> : null}
         <HargaProduk produk={produk} besar />
         {Number.isInteger(produk.stok) && produk.stok > 0 ? <p className="text-sm text-teks-lembut">Stok tersedia: {produk.stok}</p> : null}
         <p className="max-w-prose leading-relaxed text-teks-lembut">{produk.deskripsi}</p>
@@ -70,6 +75,7 @@ export default async function HalamanDetailProduk({ params, searchParams }) {
       </section>
     ) : null}
     <UlasanProduk id={produk.id} halaman={pencarian.ulasan} />
+    <AsistenProduk key={`asisten-${produk.id}`} id={String(produk.id)} />
     </>
   );
 }

@@ -45,6 +45,10 @@ export async function proxy(request) {
     if (!data.user) {
       return NextResponse.redirect(new URL("/admin/login", request.url));
     }
+    const status = await supabase.rpc("admin_aktif");
+    if (status.error || status.data !== true) {
+      return NextResponse.redirect(new URL(`/admin/login?error=${status.error ? "service" : "inactive"}`, request.url));
+    }
 
     return response;
   } catch {

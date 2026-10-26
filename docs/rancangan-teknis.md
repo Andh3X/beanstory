@@ -74,4 +74,12 @@ Format link: `https://wa.me/<nomor>?text=<pesan>`
 
 ## Akun admin
 
+US-44 menambahkan registry `admin_toko`. Sesudah `auth.getUser()`, proxy/helper memanggil `admin_aktif()`; status false atau gagal dibaca menolak akses. Migrasi 003 menambahkan kebijakan restrictive pada tabel lama dan Storage produk agar JWT admin yang dinonaktifkan tidak lagi memiliki akses. Akun lama disalin dari Auth sesuai model proyek sebelumnya; akun baru dikelola lewat `/admin/akun`. Auth Admin API hanya dipakai di server setelah verifikasi admin aktif. Semua admin aktif memiliki kewenangan pengelolaan yang sama; akun sendiri dilindungi dari nonaktif/hapus.
+
+Pengaturan toko/baris banner dibaca server dengan identitas statis sebagai cadangan. Data toko diteruskan melalui props/context untuk tautan WhatsApp; browser tidak mengakses Supabase. Log aktivitas berasal dari trigger database pada perubahan produk sehingga berada dalam transaksi yang sama.
+
+Varian mempunyai harga tersendiri dan memakai stok produk bersama. Keranjang v2 menyimpan pasangan ID produk/varian dan jumlah; API seleksi mengambil harga/varian/status terkini. Slug kategori disimpan database, tidak berubah saat rename, dan dipakai kartu/detail/sitemap.
+
+US-50 menambahkan Server Action publik yang hanya membaca produk aktif, memakai RPC service-role untuk kuota, lalu memanggil Gemini. Model memilih key fakta; jawaban dirangkai server dari data katalog. Tabel pembatas menyimpan hash token acak dan hitungan per menit, tanpa IP atau pertanyaan. Detail aktivasi/hasil pengujian: [bonus-us41-us50.md](bonus-us41-us50.md).
+
 Akun admin dibuat dari skrip di panduan workshop (bukan dari aplikasi) dan password bawaannya wajib diganti lewat US-05. Pendaftaran akun baru dimatikan di pengaturan Supabase Auth.

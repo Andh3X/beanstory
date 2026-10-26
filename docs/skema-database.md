@@ -1,5 +1,23 @@
 # Skema Database
 
+## Tambahan US-41–US-50
+
+Migrasi terpisah `migrations/003-us41-us50.sql` dijalankan setelah 001/002 dan sebelum deployment. Skema dasar asli tidak ditulis ulang.
+
+| Objek | Peran |
+| --- | --- |
+| `admin_toko` | ID Auth dan status aktif; RLS, tabel authenticated hanya dapat dibaca admin aktif. |
+| `admin_aktif()`, `status_admin(uuid,boolean)` | Pemeriksaan registry dan perubahan status dengan perlindungan akun sendiri/lock. |
+| `pengaturan_toko`, `banner` | Singleton id=1 untuk identitas/WhatsApp dan promo aktif. |
+| `varian` | ID, produk_id FK cascade, nama unik per produk, harga positif. |
+| `log_admin` | Snapshot pelaku/aksi/produk/waktu, dipenuhi trigger produk; authenticated hanya membaca. |
+| `produk.urutan`, `geser_produk(...)` | Posisi integer dan perpindahan atomik; default produk baru di akhir. |
+| `kategori.slug` | Slug unik/non-null, trigger menghasilkan slug; rename nama mempertahankan slug. |
+| `produk_terlaris()` | Agregasi 5 produk berdasarkan jumlah klik, hanya sesi admin aktif. |
+| `batas_ai`, `ambil_kuota_ai(text)` | Kuota per menit lintas instance; tabel/RPC hanya service-role. |
+
+Kebijakan restrictive tambahan pada produk/kategori/ulasan/klik dan Storage produk memastikan admin nonaktif tidak dapat memakai token lamanya. Tabel baru juga mewajibkan admin aktif. Ulasan/klik tetap memakai RPC publik melalui server sebagaimana migrasi 002. [Panduan aktivasi dan pengujian](bonus-us41-us50.md).
+
 ## Tabel `produk`
 
 | Kolom | Tipe | Keterangan |

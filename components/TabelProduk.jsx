@@ -3,6 +3,7 @@ import Tombol from "@/components/Tombol";
 import FormHapusProduk from "@/components/FormHapusProduk";
 import FormAksi from "@/components/FormAksi";
 import { ubahStatusProduk } from "@/app/admin/kelola-actions";
+import { geserProduk } from "@/app/admin/urutan-actions";
 
 export default function TabelProduk({ daftarProduk }) {
   return (
@@ -31,7 +32,10 @@ export default function TabelProduk({ daftarProduk }) {
               <td className="px-4 py-3 text-teks-lembut">{produk.kategori}</td>
               <td className="px-4 py-3">{formatRupiah(produk.harga)}</td>
               <td className="px-4 py-3">
-                <div className="flex items-start justify-end gap-2">
+                <div className="flex flex-wrap items-start justify-end gap-2">
+                  <FormAksi action={geserProduk.bind(null, produk.id, -1)} label="Naik" />
+                  <FormAksi action={geserProduk.bind(null, produk.id, 1)} label="Turun" />
+                  <Tombol href={`/admin/produk/${produk.id}/varian`} varian="garis">Varian</Tombol>
                   <Tombol href={`/admin/produk/${produk.id}/ubah`} varian="garis">
                     Ubah
                   </Tombol>

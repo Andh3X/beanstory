@@ -68,7 +68,7 @@ test("parameter tidak valid dinormalisasi; link halaman mempertahankan filter", 
   const invalid = katalog.opsiKatalog({ cari: ["x"], halaman: "-5", urutan: "harga;drop" });
   assert.equal(invalid.cari, "");
   assert.equal(invalid.halaman, 1);
-  assert.equal(invalid.urutan, "terbaru");
+  assert.equal(invalid.urutan, "pilihan");
   const url = new URL(katalog.linkKatalog(katalog.opsiKatalog({ cari: "kopi & susu", kategori: "Minuman", urutan: "termahal" }), 2), "https://example.com");
   assert.equal(url.searchParams.get("cari"), "kopi & susu");
   assert.equal(url.searchParams.get("halaman"), "2");

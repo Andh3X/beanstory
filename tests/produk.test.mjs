@@ -7,13 +7,14 @@ const root = new URL("../", import.meta.url);
 
 // Jalankan Server Action asli dengan batas Next.js/Supabase pengganti.
 // Tidak memakai kredensial atau mengubah database toko.
-async function aplikasi({ login = true, authError = false, authThrow = false, queryError = false, queryThrow = false, uploadError = false, uploadOk = false } = {}) {
+async function aplikasi({ login = true, authError = false, authThrow = false, adminActive = true, queryError = false, queryThrow = false, uploadError = false, uploadOk = false } = {}) {
   const rows = new Map([["1", { id: 1, nama: "Produk lama", harga: 1000 }]]);
   const events = [];
   const cache = [];
   const uploads = [], cleanup = [];
   let nextId = 2;
   const client = {
+    async rpc(nama) { assert.equal(nama,"admin_aktif");return {data:adminActive,error:null}; },
     auth: {
       async getUser() {
         events.push("auth");
@@ -120,10 +121,10 @@ test("tambah, ubah, hapus: data tersimpan, hanya ID tujuan berubah, cache diperb
   assert.deepEqual(app.cache, Array(3).fill(["/admin", "/", "/produk/2", "/admin/produk/2/ubah", "/sitemap.xml"]).flat());
 });
 
-for (const mode of [{ login: false }, { authError: true }, { authThrow: true }]) {
+for (const mode of [{ login: false }, { authError: true }, { authThrow: true }, { adminActive: false }]) {
   test(`ketiga aksi ditolak sebelum query saat sesi tidak sah: ${JSON.stringify(mode)}`, async () => {
     const app = await aplikasi(mode);
-    const location = mode.authThrow ? "/admin/login?error=service" : "/admin/login";
+    const location = mode.authThrow ? "/admin/login?error=service" : mode.adminActive===false ? "/admin/login?error=inactive" : "/admin/login";
     await redirected(() => app.actions.tambahProduk(null, form()), location);
     await redirected(() => app.actions.ubahProduk("1", null, form()), location);
     await redirected(() => app.actions.hapusProduk("1", null, new FormData()), location);

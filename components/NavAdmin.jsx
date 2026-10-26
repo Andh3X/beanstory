@@ -9,6 +9,11 @@ export default function NavAdmin() {
       </Link>
       <Link href="/admin/kategori" className="font-semibold hover:text-utama">Kategori</Link>
       <Link href="/admin/ulasan" className="font-semibold hover:text-utama">Ulasan</Link>
+      <Link href="/admin/banner" className="font-semibold hover:text-utama">Banner</Link>
+      <Link href="/admin/pengaturan" className="font-semibold hover:text-utama">Pengaturan</Link>
+      <Link href="/admin/akun" className="font-semibold hover:text-utama">Akun admin</Link>
+      <Link href="/admin/aktivitas" className="font-semibold hover:text-utama">Aktivitas</Link>
+      <Link href="/admin/produk/impor" className="font-semibold hover:text-utama">Impor CSV</Link>
       <Link href="/admin/password" className="font-semibold hover:text-utama">
         Ganti password
       </Link>

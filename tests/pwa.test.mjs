@@ -29,8 +29,8 @@ async function worker({ offline = false } = {}) {
 }
 
 test("manifest memiliki ikon PNG 192/512 yang valid serta maskable", async () => {
-  const { default: manifest } = await loadSource("app/manifest.js");
-  const data = manifest();
+  const { default: manifest } = await loadSource("app/manifest.js",{mocks:{"@/lib/toko-server":{ambilToko:async()=>({nama:"Toko uji",tagline:"Katalog uji"})}}});
+  const data = await manifest();
   assert.equal(data.display, "standalone");
   assert.equal(data.start_url, "/");
   assert.ok(data.icons.some((icon) => icon.purpose === "maskable"));

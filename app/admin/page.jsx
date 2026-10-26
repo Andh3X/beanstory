@@ -4,6 +4,7 @@ import Tombol from "@/components/Tombol";
 import { requireAdmin } from "@/lib/supabase/admin";
 import { halamanAdmin } from "@/lib/admin-data";
 import Paginasi from "@/components/Paginasi";
+import ProdukTerlaris from "@/components/ProdukTerlaris";
 
 const pesanStatus = {
   created: "Produk berhasil ditambahkan.",
@@ -35,6 +36,7 @@ export default async function HalamanAdmin({ searchParams }) {
   return (
     <div className="flex flex-col gap-6 py-8">
       <NavAdmin />
+      <ProdukTerlaris db={supabase} />
       <section className="rounded-xl border border-garis bg-permukaan p-4" aria-label="Statistik seluruh produk">
         {statistik ? <><h2 className="font-bold">Seluruh produk: {statistik.reduce((total, item) => total + Number(item.jumlah), 0)}</h2><p className="mt-1 text-sm text-teks-lembut">Termasuk produk nonaktif, tidak mengikuti pencarian.</p><ul className="mt-3 flex flex-wrap gap-4 text-sm">{statistik.map((item) => <li key={item.kategori ?? ""}>{item.kategori || "Tanpa kategori"}: {item.jumlah}</li>)}</ul></> : <p role="alert">Statistik belum dapat dimuat.</p>}
       </section>

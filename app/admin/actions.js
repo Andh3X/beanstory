@@ -41,25 +41,7 @@ export async function keluarAdmin() {
 }
 
 export async function ubahPasswordAdmin(formData) {
-  let supabase;
-
-  try {
-    supabase = await createSessionClient();
-  } catch {
-    redirect("/admin/password?status=session-error");
-  }
-
-  let hasilSesi;
-
-  try {
-    hasilSesi = await supabase.auth.getUser();
-  } catch {
-    redirect("/admin/password?status=session-error");
-  }
-
-  if (hasilSesi.error || !hasilSesi.data.user) {
-    redirect("/admin/login");
-  }
+  const supabase = await requireAdmin();
 
   const password = formData.get("password_baru");
   const konfirmasiPassword = formData.get("konfirmasi_password");

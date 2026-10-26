@@ -9,7 +9,7 @@ export default async function HalamanLogin({ searchParams }) {
       ? "Email atau password salah. Periksa kembali lalu coba lagi."
       : kodeError === "service"
         ? "Login gagal karena layanan autentikasi tidak dapat dihubungi. Coba lagi beberapa saat."
-        : null;
+        : kodeError === "inactive" ? "Akun ini tidak memiliki akses admin aktif. Hubungi pemilik toko." : null;
 
   return (
     <div className="mx-auto flex max-w-sm flex-col gap-6 py-12">

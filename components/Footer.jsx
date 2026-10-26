@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { toko } from "@/lib/toko";
 
-export default function Footer() {
+export default function Footer({toko}) {
   return (
     <footer className="mt-16 border-t border-garis bg-permukaan">
       <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-8 text-sm text-teks-lembut sm:flex-row sm:justify-between">

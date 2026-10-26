@@ -1,10 +1,12 @@
-import { toko } from "@/lib/toko";
+import { ambilToko } from "@/lib/toko-server";
+export const dynamic="force-dynamic";
 
-export default function manifest() {
+export default async function manifest() {
+  const toko=await ambilToko();
   return {
     id: "/",
     name: toko.nama,
-    short_name: "Bean Story",
+    short_name: toko.nama.slice(0, 20),
     description: toko.tagline,
     lang: "id",
     start_url: "/",

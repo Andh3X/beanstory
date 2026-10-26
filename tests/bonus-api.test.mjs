@@ -5,7 +5,7 @@ import { loadSource } from "./helpers.mjs";
 test("API seleksi hanya membaca produk aktif; JSON, batas, dan kegagalan ditangani", async () => {
   const calls = []; let gagal = false;
   const db = { from(table) { calls.push(["from", table]); return { select(kolom) { calls.push(["select", kolom]); return this; }, eq(col, value) { calls.push(["eq", col, value]); return this; }, async in(col, ids) { calls.push(["in", col, Array.from(ids)]); return gagal ? { error: new Error("private") } : { data: [{ id: 1, aktif: true }] }; } }; } };
-  const mod = await loadSource("app/api/produk/seleksi/route.js", { mocks: { "@/lib/supabase/server": { createServerClient: () => db } }, globals: { Response } });
+  const mod = await loadSource("app/api/produk/seleksi/route.js", { mocks: { "@/lib/toko-server":{ambilToko:async()=>({nama:"Toko uji",nomorWhatsApp:"6281234567890"})}, "@/lib/supabase/server": { createServerClient: () => db } }, globals: { Response } });
   const req = (body) => new Request("https://shop.test/api/produk/seleksi", { method: "POST", body });
   const res = await mod.POST(req(JSON.stringify({ ids: ["1", "2"] })));
   assert.equal(res.status, 200); assert.equal(res.headers.get("cache-control"), "no-store"); assert.deepEqual(calls.find((c) => c[0] === "eq"), ["eq", "aktif", true]);
