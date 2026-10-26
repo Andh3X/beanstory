@@ -118,7 +118,7 @@ test("tambah, ubah, hapus: data tersimpan, hanya ID tujuan berubah, cache diperb
   assert.equal(app.rows.has("2"), false);
   assert.equal(app.rows.has("1"), true);
   assert.deepEqual(app.events, ["auth", "query", "query", "auth", "query", "query", "auth", "query"]);
-  assert.deepEqual(app.cache, Array(3).fill(["/admin", "/", "/produk/2", "/admin/produk/2/ubah", "/sitemap.xml"]).flat());
+  assert.deepEqual(app.cache, Array(3).fill(["/admin", "/admin/aktivitas", "/", "/produk/2", "/admin/produk/2/ubah", "/sitemap.xml"]).flat());
 });
 
 for (const mode of [{ login: false }, { authError: true }, { authThrow: true }, { adminActive: false }]) {

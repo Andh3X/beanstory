@@ -1,6 +1,25 @@
 -- Pemeriksaan BACA SAJA di Supabase SQL Editor, sesudah migrasi 002 dan 003.
 -- Tidak mengubah data, kebijakan, atau pengguna. Jalankan seluruh query.
 
+-- US-41: definisi terpasang harus berisi count(*) dari klik_whatsapp,
+-- GROUP BY produk, ORDER BY jumlah menurun/ID menaik, dan LIMIT 5.
+select pg_get_functiondef('public.produk_terlaris()'::regprocedure)
+  as definisi_produk_terlaris;
+
+-- Harus true, termasuk jika klik kosong. Membandingkan seluruh ID/hitungan.
+with expected as (
+  select p.id as produk_id, p.nama, count(*) as jumlah
+  from public.klik_whatsapp k join public.produk p on p.id = k.produk_id
+  group by p.id, p.nama order by count(*) desc, p.id limit 5
+), actual as (
+  select * from public.produk_terlaris()
+)
+select not exists (
+  (select * from expected except select * from actual)
+  union all
+  (select * from actual except select * from expected)
+) as terlaris_sesuai;
+
 -- US-39: pastikan definisi yang TERPASANG memfilter ulasan terlihat dan produk aktif.
 select pg_get_functiondef('public.ringkasan_ulasan(bigint)'::regprocedure)
   as definisi_ringkasan_ulasan;

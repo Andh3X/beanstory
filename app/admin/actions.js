@@ -7,6 +7,42 @@ import { requireAdmin } from "@/lib/supabase/admin";
 import { bacaFormProduk, idProdukValid } from "@/lib/produk";
 import { unggahFoto, bersihkanUpload } from "@/lib/upload";
 
+/**
+ * US-45: definisi trigger dari docs/migrations/003-us41-us50.sql disertakan
+ * bersama pemanggil CRUD. SQL ini diterapkan saat migrasi, bukan per request.
+ * Log dan perubahan produk berada dalam transaksi database yang sama.
+ * Awal SQL US-45 tabel
+create table if not exists public.log_admin (
+  id bigint generated always as identity primary key,
+  admin_id uuid,
+  pelaku text not null,
+  aksi text not null check(aksi in ('tambah','ubah','hapus')),
+  produk_id bigint not null,
+  nama_produk text not null,
+  created_at timestamptz not null default now()
+);
+ * Akhir SQL US-45 tabel
+ * Awal SQL US-45 trigger
+create or replace function public.log_perubahan_produk()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  insert into public.log_admin(admin_id, pelaku, aksi, produk_id, nama_produk)
+  values(auth.uid(), coalesce(auth.jwt()->>'email', 'Sistem'),
+    case tg_op when 'INSERT' then 'tambah' when 'UPDATE' then 'ubah' else 'hapus' end,
+    case when tg_op = 'DELETE' then old.id else new.id end,
+    case when tg_op = 'DELETE' then old.nama else new.nama end);
+  if tg_op = 'DELETE' then return old; end if;
+  return new;
+end;
+$$;
+revoke all on function public.log_perubahan_produk() from public, anon, authenticated;
+
+drop trigger if exists catat_perubahan_produk on public.produk;
+create trigger catat_perubahan_produk after insert or update or delete on public.produk
+for each row execute function public.log_perubahan_produk();
+ * Akhir SQL US-45 trigger
+ */
+
 export async function masukAdmin(formData) {
   const email = formData.get("email");
   const password = formData.get("password");
@@ -71,6 +107,7 @@ export async function ubahPasswordAdmin(formData) {
 
 function perbaruiHalamanProduk(id) {
   revalidatePath("/admin");
+  revalidatePath("/admin/aktivitas");
   revalidatePath("/");
   revalidatePath(`/produk/${id}`);
   revalidatePath(`/admin/produk/${id}/ubah`);

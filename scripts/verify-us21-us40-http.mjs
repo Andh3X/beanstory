@@ -176,7 +176,7 @@ try {
   html = await (await fetch(base+"/bandingkan?ids=1,2")).text(); assert.ok(html.includes("Kopi HTTP") && html.includes("Teh HTTP"));
   html = await (await fetch(base+"/sitemap.xml")).text(); assert.ok(html.includes("/produk/1")); assert.ok(!html.includes("/produk/3"));
   res = await fetch(base+"/api/produk/seleksi", { method:"POST", body:JSON.stringify({ids:["1","3"]}) }); assert.deepEqual((await res.json()).produk.map((p)=>p.id),[1]);
-  html = await (await fetch(base+"/admin", {headers:{Cookie:cookie}})).text(); assert.ok(html.includes("RAHASIA NONAKTIF")); assert.match(html,/Seluruh produk:/); assert.ok(html.includes("Ekspor CSV"));
+  html = await (await fetch(base+"/admin", {headers:{Cookie:cookie}})).text(); assert.ok(html.includes("RAHASIA NONAKTIF")); assert.match(html,/Seluruh produk:/); assert.ok(html.includes("Ekspor CSV")); assert.ok(html.includes("Belum ada klik pesan WhatsApp."));
   const values = { nama:"Produk CRUD HTTP", harga:"30000", kategori:"Minuman", foto_url:"/produk/kopi.svg", deskripsi:"Uji HTTP", aktif:"true", stok:"4", harga_diskon:"25000", foto_tambahan:"", badge:"" };
   let result = await action("tambahProduk", [null,fd(values)]); assert.match(result.res.headers.get("x-action-redirect") || "", /status=created/);
   const baru = produk.find((p)=>p.nama===values.nama); assert.ok(baru);
@@ -241,7 +241,28 @@ try {
   result=await action("tanyaProduk",["1",{},fd({pertanyaan:"Berapa harga?"})],"/produk/1",false);assert.ok(result.text.includes("Harga dasar yang berlaku"));assert.ok(visitorCookie);
   for(let i=0;i<4;i++)await action("tanyaProduk",["1",{},fd({pertanyaan:"Berapa harga?"})],"/produk/1",false);
   result=await action("tanyaProduk",["1",{},fd({pertanyaan:"Berapa harga?"})],"/produk/1",false);assert.ok(result.text.includes("Batas kiriman AI tercapai"));
-  console.log("HTTP OK US-21–US-50: regresi, dashboard klik, banner, pengaturan/WhatsApp, akun/self-protection/penonaktifan sesi, log, impor, urutan, varian, kategori/404/sitemap, AI dan kuota. Supabase/Auth/Gemini pengganti; SQL/RLS asli dan UI browser belum diuji.");
+  // US-41: >5 kandidat, klik berulang, serta nilai seri dengan pemutus ID.
+  const rankingClicks = [3,8,8,7,6,5,4];
+  for (let i=0; i<rankingClicks.length; i++) {
+    const p = { ...produk[0], id: 800+i, nama: `Ranking HTTP ${i}` };
+    produk.push(p);
+    for (let j=0; j<rankingClicks[i]; j++) klik.push({ produk_id: p.id, created_at: new Date().toISOString() });
+  }
+  html=await(await fetch(base+"/admin",{headers:{Cookie:cookie}})).text();
+  const top = html.match(/<section aria-label="Produk terlaris"[\s\S]*?<\/section>/)?.[0].replace(/<!--[\s\S]*?-->/g, "");
+  assert.ok(top);
+  assert.equal([...top.matchAll(/<li\b/g)].length, 5);
+  assert.deepEqual([...top.matchAll(/<span>(Ranking HTTP \d)<\/span>/g)].map((m)=>m[1]), [1,2,3,4,5].map((i)=>`Ranking HTTP ${i}`));
+  assert.deepEqual([...top.matchAll(/<strong>(\d+) klik<\/strong>/g)].map((m)=>Number(m[1])), [8,8,7,6,5]);
+  // US-45: >50 log, urutan waktu/ID stabil, pelaku/aksi/waktu ditampilkan.
+  for (let i=0; i<55; i++) log_admin.push({ id: 90000+i, admin_id: user.id, pelaku: user.email, aksi: "ubah", produk_id: 1, nama_produk: `Log batas ${i}`, created_at: "2030-01-01T01:00:00Z" });
+  html=await(await fetch(base+"/admin/aktivitas",{headers:{Cookie:cookie}})).text();
+  const activity = html.match(/<ol aria-label="Log aktivitas"[\s\S]*?<\/ol>/)?.[0].replace(/<!--[\s\S]*?-->/g, "");
+  assert.ok(activity);
+  assert.equal([...activity.matchAll(/<li\b/g)].length, 50);
+  assert.deepEqual([...activity.matchAll(/Log batas (\d+) /g)].map((m)=>Number(m[1])), Array.from({length:50},(_,i)=>54-i));
+  assert.ok(activity.includes(user.email)); assert.match(activity, /datetime="2030-01-01T01:00:00Z"/i);
+  console.log("HTTP OK US-21–US-50: regresi, ranking tepat 5 dari 7 kandidat, klik/nilai seri, log CRUD dan batas 50 dari 55, banner, pengaturan/WhatsApp, akun, impor, urutan, varian, kategori, AI/kuota. Supabase/Auth/Gemini pengganti; SQL/RLS asli dan UI browser belum diuji.");
 } catch (error) {
   console.error(error); console.error(logs.slice(-6000)); process.exitCode=1;
 } finally {

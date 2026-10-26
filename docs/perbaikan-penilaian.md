@@ -40,3 +40,15 @@ Hasil audit: **77/77 pengujian lulus**, build Production dan skrip HTTP lulus. P
 - Offline/PWA: `public/offline.html`, `public/offline.css`, `public/sw.js`.
 - Verifikasi: `tests/security.test.mjs`, `tests/pwa.test.mjs`, `scripts/verify-us21-us40-http.mjs`, `scripts/verify-penilaian-production.mjs`, `docs/verifikasi-penilaian.sql`.
 - Dokumentasi: `PROMPTS.md`, `README.md`, `docs/checklist-keamanan.md`, dan panduan ini.
+
+## Tindak lanjut US-41 dan US-45
+
+Penilaian berikutnya masih menolak US-41 dan US-45 karena definisi RPC/trigger tidak masuk kode yang diberikan kepada penilai, dan batas lima produk belum terlihat pada komponen. Definisi lengkap dari migrasi 003 kini disertakan sebagai dokumentasi SQL di modul pemanggil: `lib/admin-data.js` untuk RPC terlaris dan `app/admin/actions.js` untuk tabel/fungsi/trigger log. Pengujian mencocokkan setiap blok dengan migrasi 003 agar dokumentasi tidak berbeda dari SQL sebenarnya. Blok komentar tidak menjalankan DDL saat request; migrasi 003 tetap memasang fungsi dan trigger database.
+
+US-41 sekarang memakai `ambilProdukTerlaris`: `rpc("produk_terlaris").limit(5)` dan batas array defensif; komponen juga memakai `data.slice(0, 5)` secara eksplisit. Hitungan dan urutan tetap berasal dari `count(*)`, `group by`, `order by count(*) desc, p.id`, dan `limit 5` pada database. Bila hanya ada kurang dari lima produk yang diklik, hanya data tersebut yang ditampilkan; tidak membuat produk atau klik fiktif. Pesan kosong/error tetap berbeda.
+
+US-45 menampilkan kolom pelaku/aksi/produk/waktu secara eksplisit, memakai batas 50 dan pemutus urutan ID. Keberhasilan CRUD kini juga merevalidasi `/admin/aktivitas`. Pencatatan tetap satu kali di trigger dalam transaksi produk; actor berasal dari UID/email JWT, aksi ditentukan INSERT/UPDATE/DELETE, waktu dari default `now()`. Tidak menambah insert log kedua di JavaScript.
+
+Hasil verifikasi tindak lanjut: **81/81 pengujian lulus**, build Production berhasil, dan HTTP lulus. HTTP memakai tujuh kandidat dengan klik 3/8/8/7/6/5/4 dan membuktikan lima pemenang berurutan (termasuk nilai seri); log diuji dengan 55 baris untuk memastikan tepat 50 terbaru, pelaku dan timestamp tampil. Regresi CRUD serta penolakan tanpa sesi tetap lulus. Semua mutasi pengujian berada di layanan pengganti dalam memori. SQL/RLS/trigger PostgreSQL sebenarnya dan Production sesudah deployment belum diuji pada tindak lanjut ini.
+
+File tindak lanjut: `lib/admin-data.js`, `components/ProdukTerlaris.jsx`, `app/admin/actions.js`, `app/admin/aktivitas/page.jsx`, `tests/terlaris-log.test.mjs`, `tests/produk.test.mjs`, skrip HTTP, `docs/verifikasi-penilaian.sql`, README, jurnal prompt, dan panduan ini. Tidak ada perubahan skema, RLS, atau migrasi baru. Query baca saja sekarang juga memeriksa definisi dan hasil terlaris; `terlaris_sesuai` harus true. Setelah migrasi 003 yang sudah ada dipastikan sukses, cukup push/deploy kode lalu jalankan penilaian ulang; skor akhir ditentukan penilai.
