@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "node --experimental-vm-modules --test tests/produk.test.mjs",
+    "test": "node --experimental-vm-modules --test",
     "dev": "next dev",
     "build": "next build",
     "start": "next start"

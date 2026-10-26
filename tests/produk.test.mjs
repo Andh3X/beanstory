@@ -199,3 +199,34 @@ for (const mode of [{ queryError: true }, { queryThrow: true }]) {
     assert.equal(app.cache.length, 0);
   });
 }
+
+test("galeri, stok, harga diskon, dan badge tersimpan serta dapat dikosongkan", async () => {
+  const app = await aplikasi();
+  await redirected(() => app.actions.tambahProduk(null, form({ foto_tambahan: "https://example.com/2.jpg\n/produk/keripik.svg", stok: "0", harga_diskon: "20000", badge: "Baru" })), "/admin?status=created");
+  const row = app.rows.get("2");
+  assert.equal(row.stok, 0);
+  assert.equal(row.harga_diskon, 20000);
+  assert.equal(row.badge, "Baru");
+  assert.equal(row.foto_tambahan.length, 2);
+  await redirected(() => app.actions.ubahProduk("2", null, form({ foto_tambahan: "", stok: "", harga_diskon: "", badge: "" })), "/admin?status=updated");
+  assert.equal(app.rows.get("2").stok, null);
+  assert.equal(app.rows.get("2").harga_diskon, null);
+  assert.equal(app.rows.get("2").badge, null);
+  assert.equal(app.rows.get("2").foto_tambahan.length, 0);
+});
+
+test("validasi bonus menolak stok negatif, promo tidak valid, serta galeri berlebihan", async () => {
+  const app = await aplikasi();
+  const invalid = [
+    { stok: "-1" }, { stok: "2.5" }, { stok: "2147483648" },
+    { harga_diskon: "25000" }, { harga_diskon: "26000" }, { harga_diskon: "-1" },
+    { harga_diskon: "1.5" }, { badge: "Promo palsu" },
+    { foto_tambahan: "javascript:alert(1)" },
+    { foto_tambahan: Array.from({ length: 10 }, (_, i) => `https://example.com/${i}.jpg`).join("\n") },
+  ];
+  for (const values of invalid) {
+    assert.equal(typeof (await app.actions.tambahProduk(null, form(values))).error, "string");
+  }
+  assert.equal(app.events.includes("query"), false);
+  assert.equal(app.rows.size, 1);
+});

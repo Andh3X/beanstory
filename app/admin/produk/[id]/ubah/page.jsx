@@ -39,7 +39,8 @@ export default async function HalamanUbahProduk({ params }) {
           <Tombol href="/admin" varian="garis">Kembali ke daftar produk</Tombol>
         </div>
       ) : (
-        <FormProduk action={ubahProduk.bind(null, id)} produk={produk} labelTombol="Simpan perubahan" />
+        <FormProduk key={produk.id} action={ubahProduk.bind(null, id)} produk={produk} labelTombol="Simpan perubahan"
+          fiturLanjutan={["foto_tambahan", "stok", "harga_diskon", "badge"].every((kolom) => Object.hasOwn(produk, kolom))} />
       )}
     </div>
   );

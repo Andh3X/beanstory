@@ -4,12 +4,19 @@ import { tambahProduk } from "@/app/admin/actions";
 import { requireAdmin } from "@/lib/supabase/admin";
 
 export default async function HalamanTambahProduk() {
-  await requireAdmin();
+  const supabase = await requireAdmin();
+  let fiturLanjutan = false;
+  try {
+    const { error } = await supabase.from("produk").select("foto_tambahan,stok,harga_diskon,badge").limit(1);
+    fiturLanjutan = !error;
+  } catch {
+    // Form dasar tetap tersedia jika kolom bonus belum diaktifkan.
+  }
   return (
     <div className="flex flex-col gap-6 py-8">
       <NavAdmin />
       <h1 className="text-2xl font-extrabold">Tambah produk</h1>
-      <FormProduk action={tambahProduk} labelTombol="Simpan produk" />
+      <FormProduk action={tambahProduk} labelTombol="Simpan produk" fiturLanjutan={fiturLanjutan} />
     </div>
   );
 }
