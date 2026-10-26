@@ -43,7 +43,7 @@ export default async function HalamanAdmin({ searchParams }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-extrabold">Produk</h1>
         <Tombol href="/admin/produk/baru">Tambah produk</Tombol>
-        <a href="/admin/produk/ekspor" className="text-sm text-utama underline">Unduh seluruh produk (CSV)</a>
+        <a href="/admin/produk/ekspor" className="text-sm text-utama underline">Ekspor CSV</a>
       </div>
       <form action="/admin" className="flex flex-wrap gap-2"><label className="flex flex-col gap-1 text-sm">Cari nama produk<input name="cari" defaultValue={hasil?.cari || ""} maxLength={100} className="rounded-lg border border-garis bg-latar p-3" /></label><Tombol type="submit" varian="garis">Cari</Tombol></form>
       {pesanSukses && !gagalMemuat ? <p role="status" className="text-sm text-utama">{pesanSukses}</p> : null}

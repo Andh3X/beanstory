@@ -2,53 +2,55 @@
 
 Catat prompt penting selama membangun aplikasi: apa yang kamu minta, hasilnya, dan perbaikan yang dilakukan. Beri tanda **[SENDIRI]** untuk prompt yang kamu tulis sendiri (bukan dari lembar kerja).
 
+Entri US-01–US-06 dilengkapi saat audit 26 Oktober 2026 berdasarkan kode yang tersedia, percakapan audit, dan screenshot penilaian pengguna. Teks prompt implementasi awal tidak tersedia; prompt di bawah adalah permintaan audit/perbaikan yang benar-benar diberikan pengguna, bukan rekonstruksi kutipan prompt awal. Hasil penilai pada screenshot dibedakan dari verifikasi lokal dan Production.
+
 ## US-01 Katalog dari database
 
-**Prompt:**
+**Prompt:** [SENDIRI] "Perbaiki karya saya agar mndapatkan score sempurna!" Cakupan audit US-01: pastikan katalog membaca database di server dan mempunyai keadaan kosong.
 
-**Hasil:**
+**Hasil:** `app/page.jsx` memakai `Katalog` dan `ambilHalamanKatalog` untuk membaca tabel `produk` melalui server, dengan filter aktif dan paginasi database. Kartu menampilkan foto, kategori, nama, dan harga rupiah; keadaan kosong tersedia. Screenshot penilaian memberi 10/10.
 
-**Perbaikan:**
+**Perbaikan:** Audit ini menambahkan CSP bernonce pada katalog dan header keamanan global. Tidak mengganti sumber data yang sudah benar. Pengujian HTTP memakai data pengganti untuk memastikan produk aktif tampil dan produk nonaktif tidak bocor; bukan bukti mutasi Production.
 
 ## US-02 Detail produk
 
-**Prompt:**
+**Prompt:** [SENDIRI] "Perbaiki karya saya agar mndapatkan score sempurna!" Cakupan audit US-02: periksa data detail serta penanganan produk hilang/nonaktif.
 
-**Hasil:**
+**Hasil:** `/produk/[id]` membaca foto, kategori, nama, harga, dan deskripsi melalui `ambilProdukPublik`. ID salah, produk hilang, dan produk nonaktif memanggil `notFound()`. Screenshot penilaian memberi 10/10.
 
-**Perbaikan:**
+**Perbaikan:** CSP kini diterapkan juga pada detail dan halaman 404. Pengujian HTTP memastikan status 200/404 serta nonce pada tag skrip sesuai dengan header. Pemeriksaan keberadaan produk sebelum batas loading tetap dipertahankan agar 404 tidak berubah menjadi 200 karena streaming.
 
 ## US-03 Pesan via WhatsApp
 
-**Prompt:**
+**Prompt:** [SENDIRI] "Perbaiki karya saya agar mndapatkan score sempurna!" Cakupan audit US-03: pertahankan pesan WhatsApp dengan nama/harga serta nomor toko yang benar.
 
-**Hasil:**
+**Hasil:** `TombolWhatsApp` membentuk tautan wa.me dengan pesan dari `buatPesanWhatsApp`, berisi nama, jumlah, varian bila ada, harga satuan, dan total. Nomor memakai pengaturan database dengan cadangan `lib/toko.js`. Screenshot penilaian memberi 10/10.
 
-**Perbaikan:**
+**Perbaikan:** Kebijakan `form-action 'self'` tidak membatasi navigasi tautan WhatsApp. Pencatatan klik tetap melalui origin aplikasi dan kegagalannya tidak menghambat tautan. Pengujian pesan/keranjang dan HTTP tersedia; pembukaan aplikasi WhatsApp di perangkat pengguna belum diuji pada audit ini.
 
 ## US-04 Login admin
 
-**Prompt:**
+**Prompt:** [SENDIRI] "Perbaiki karya saya agar mndapatkan score sempurna!" Cakupan audit US-04: pertahankan autentikasi server dan arah login/keluar.
 
-**Hasil:**
+**Hasil:** `masukAdmin` memakai `signInWithPassword` melalui sesi server. Berhasil diarahkan ke `/admin`, gagal menampilkan pesan kredensial/layanan; `keluarAdmin` memanggil `signOut` dan kembali ke login. Screenshot penilaian memberi 10/10.
 
-**Perbaikan:**
+**Perbaikan:** Refaktor proxy untuk CSP mempertahankan proteksi admin dan cookie hasil refresh. Pengujian proxy memastikan nonce tetap diteruskan bersama cookie dan redirect login tetap mempunyai header CSP. Tidak mengubah password atau akun toko saat audit.
 
 ## US-05 Ganti password
 
-**Prompt:**
+**Prompt:** [SENDIRI] "Perbaiki karya saya agar mndapatkan score sempurna!" Cakupan audit US-05: pastikan pergantian password tetap memeriksa admin dan validasi server.
 
-**Hasil:**
+**Hasil:** `ubahPasswordAdmin` memanggil `requireAdmin()` sebelum `auth.updateUser`, memvalidasi minimal delapan karakter dan konfirmasi yang sama. Status sukses, terlalu pendek, tidak sama, dan kegagalan update dibedakan. Screenshot penilaian memberi 10/10.
 
-**Perbaikan:**
+**Perbaikan:** Halaman password kini memperoleh CSP/header keamanan melalui proxy global. Pemeriksaan sesi tetap dilakukan di Server Action, terpisah dari proxy. Password admin sebenarnya tidak diubah untuk keperluan pengujian.
 
 ## US-06 Proteksi halaman admin
 
-**Prompt:**
+**Prompt:** [SENDIRI] "Perbaiki karya saya agar mndapatkan score sempurna!" Cakupan audit US-06: pastikan penambahan CSP tidak membuka rute/aksi admin.
 
-**Hasil:**
+**Hasil:** Proxy menjaga seluruh `/admin` kecuali login. `requireAdmin` memeriksa `auth.getUser()` dan `admin_aktif()`; Server Action dan ekspor memanggil helper ini sebelum query. Screenshot penilaian memberi 10/10.
 
-**Perbaikan:**
+**Perbaikan:** Proxy kini juga melayani nonce halaman publik tanpa memanggil Auth untuk pengunjung. Pengujian baru membuktikan sesi kosong, admin nonaktif, dan error registry tetap ditolak; header `x-nonce`/CSP palsu dari browser ditimpa. RLS dan `docs/schema.sql` tidak diubah.
 
 ## Debugging dan fitur bonus
 
@@ -165,3 +167,15 @@ Tambahkan bagian baru untuk setiap error yang kamu perbaiki atau fitur bonus yan
 **Verifikasi:** 73 pengujian otomatis lulus, termasuk 20 skenario tambahan. Build Production berhasil. Skrip HTTP baru menjalankan regresi dan seluruh fitur baru melalui build Next.js dengan Supabase/Auth/Gemini pengganti dalam memori, termasuk perubahan nomor WA, banner aktif/nonaktif, siklus akun dan penolakan JWT registry nonaktif, impor campuran, urutan, varian, kategori/sitemap/404, AI dan kuota keenam. Hook provider hanya dimuat proses uji; kunci dummy, tanpa perubahan database/akun/model live. Pemeriksaan browser menghasilkan apps=[]/browsers=[].
 
 **Aktivasi dan batas verifikasi:** Migrasi baru docs/migrations/003-us41-us50.sql disiapkan terpisah, wajib dijalankan melalui Supabase SQL Editor sebelum deployment. Kebijakan lama tetap aktif dan diberi syarat restrictive admin aktif; docs/schema.sql asli tidak diubah. SQL/RLS/trigger/lock/idempotensi pada PostgreSQL sebenarnya, Auth/Storage/Gemini live, tampilan 390 px, interaksi browser dan Production belum diverifikasi. Panduan langkah aktivasi, daftar file, perilaku, serta uji lengkap ada di docs/bonus-us41-us50.md. Tidak memasang paket npm atau menjalankan perintah Git; push/deployment dilakukan pengguna.
+
+### Audit dan perbaikan hasil penilaian 535/600 (26 Oktober 2026)
+
+**Prompt pengguna [SENDIRI]:** "Perhatikan screenshot ini, dari seluruh user story, periksa bagian mana yang belum tereksekusi secara sempurna?", dilanjutkan "Perbaiki karya saya agar mndapatkan score sempurna!". Screenshot memberi US-35/US-39/US-45 masing-masing 0/10, jurnal wajib 0/15, header keamanan 0/10, dan CSP 0/10. Skor tersebut adalah hasil layanan penilai pada saat screenshot, bukan hasil setelah perubahan ini.
+
+**Hasil dan perbaikan:** Label tautan menjadi "Ekspor CSV". Jalur SQL moderasi (`u.terlihat` dalam count/avg) dan trigger log transaksi didokumentasikan pada tempat pemanggilan serta panduan bukti; tidak membuat pencatatan ganda atau mengubah RLS/schema.sql. Jurnal US-01–US-06 yang kosong dilengkapi dengan catatan audit yang jujur: prompt awal tidak tersedia. Menambahkan header keamanan global dan CSP dengan nonce acak per request melalui proxy; renderer Next.js dan skrip tema memakai nonce yang sama. Header nonce kiriman browser ditimpa. Auth server, status admin aktif, dan refresh cookie tetap dijaga. CSS offline dipisah dan cache worker dinaikkan ke v2 supaya tetap berfungsi dengan CSP ketat.
+
+**Verifikasi lokal sebenarnya:** `npm test` berhasil: 77/77, termasuk empat pengujian CSP/proxy baru. `npm run build` Production berhasil, dengan peringatan lockfile folder induk yang sudah ada. `node scripts/verify-us41-us50-http.mjs` berhasil: respons katalog/detail/login/404/redirect admin memuat header keamanan dan nonce baru yang cocok pada seluruh tag script, tanpa unsafe-inline/eval; aset offline dapat diakses; label/unduhan CSV; dua rating 4 dan 2 menghasilkan rata-rata 3.0, menyembunyikan rating 4 mengubahnya menjadi 2.0, memulihkan menjadi 3.0, menghapus rating 2 menjadi 4.0; log CRUD memiliki pelaku/aksi/waktu. HTTP menjalankan build aplikasi dengan Supabase/Auth/Gemini pengganti, bukan PostgreSQL asli.
+
+**Pemeriksaan database asli, baca saja:** `node scripts/verify-penilaian-production.mjs --database-only` pertama terhalang koneksi sandbox, lalu berhasil dengan akses jaringan untuk pembacaan: tabel log_admin tersedia dengan 8 baris, dan hasil RPC ringkasan cocok dengan seluruh rating terlihat pada tiga produk aktif sampel (ID 1, 2, 3). Tidak menampilkan kunci, email, atau komentar pengunjung; tidak mengubah data. Hasil ini tidak membuktikan trigger aktif atau seluruh alur moderasi di database asli. Query `docs/verifikasi-penilaian.sql` disiapkan untuk memeriksa definisi RPC/trigger yang terpasang.
+
+**Belum diverifikasi:** Browser terhubung tidak tersedia (pemeriksaan apps/browsers kosong); tidak menjalankan pengujian visual 390 px, hidrasi/interaksi CSP dalam browser, mutasi admin/ulasan Production, atau deployment kode baru. Pengguna melakukan push/deployment serta penilaian ulang. Tidak ada paket baru, perintah Git, perubahan akun/password, atau migrasi tambahan. Skor sempurna tidak dinyatakan tercapai sebelum hasil penilaian baru.

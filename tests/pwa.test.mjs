@@ -16,7 +16,7 @@ async function worker({ offline = false } = {}) {
     caches: {
       open: async () => cache,
       match: async (request) => { calls.push(["match", request]); return "halaman-offline"; },
-      keys: async () => ["beanstory-static-v0", "beanstory-static-v1", "aplikasi-lain"],
+      keys: async () => ["beanstory-static-v0", "beanstory-static-v2", "aplikasi-lain"],
       delete: async (name) => calls.push(["delete", name]),
     },
     fetch: async (request) => {

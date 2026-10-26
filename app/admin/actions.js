@@ -103,6 +103,9 @@ async function simpanProduk(id, formData, mengubah) {
     upload = await unggahFoto(supabase, file);
     if (upload.error) return { error: upload.error, fieldErrors: { foto_file: upload.error } };
     if (upload.url) hasil.data.foto_url = upload.url;
+    // US-45: trigger AFTER INSERT/UPDATE/DELETE catat_perubahan_produk menulis
+    // log_admin (pelaku auth.uid()/email JWT, aksi, waktu) dalam transaksi ini.
+    // Definisi: docs/migrations/003-us41-us50.sql -> log_perubahan_produk().
     const query = mengubah
       ? supabase.from("produk").update(hasil.data).eq("id", id)
       : supabase.from("produk").insert(hasil.data);
@@ -144,6 +147,8 @@ export async function hapusProduk(id, _state, _formData) {
 
   let produk;
   try {
+    // Trigger log_perubahan_produk mencatat OLD.id/nama saat DELETE,
+    // sehingga log tetap tersedia sesudah produk dihapus; tidak ada insert ganda.
     const { data, error } = await supabase
       .from("produk")
       .delete()

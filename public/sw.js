@@ -1,8 +1,8 @@
-const CACHE = "beanstory-static-v1";
+const CACHE = "beanstory-static-v2";
 const OFFLINE = "/offline.html";
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll([OFFLINE, "/icons/icon-192.png", "/icons/icon-512.png"])).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll([OFFLINE, "/offline.css", "/icons/icon-192.png", "/icons/icon-512.png"])).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", (event) => {
@@ -17,7 +17,7 @@ self.addEventListener("fetch", (event) => {
   if (request.mode === "navigate") {
     // Harga dan stok selalu berasal dari jaringan; halaman katalog tidak dicache.
     event.respondWith(fetch(request).catch(() => caches.match(OFFLINE)));
-  } else if (/^\/icons\//.test(url.pathname) || /^\/produk\/[^/]+\.svg$/.test(url.pathname)) {
+  } else if (url.pathname === "/offline.css" || /^\/icons\//.test(url.pathname) || /^\/produk\/[^/]+\.svg$/.test(url.pathname)) {
     event.respondWith(fetch(request).then((response) => {
       if (response.ok) {
         const copy = response.clone();

@@ -144,6 +144,31 @@ try {
     return { res, text: await res.text() };
   }
   const fd = (values) => { const form = new FormData(); for (const [k,v] of Object.entries(values)) form.set(k,v); return form; };
+  // Header nyata dari build Production, termasuk nonce yang dipakai tag HTML.
+  let previousNonce;
+  for (const path of ["/", "/produk/1", "/admin/login", "/halaman-tidak-ada", "/admin"]) {
+    const response = await fetch(base+path, { redirect: "manual", headers: { "x-nonce": "nonce-palsu" } });
+    assert.equal(response.headers.get("x-content-type-options"), "nosniff", path);
+    assert.equal(response.headers.get("x-frame-options"), "DENY", path);
+    assert.equal(response.headers.get("referrer-policy"), "strict-origin-when-cross-origin", path);
+    const csp = response.headers.get("content-security-policy");
+    assert.match(csp, /frame-ancestors 'none'/);
+    assert.doesNotMatch(csp, /unsafe-inline|unsafe-eval/);
+    const nonce = csp.match(/'nonce-([^']+)'/)?.[1];
+    assert.ok(nonce && nonce !== "nonce-palsu" && nonce !== previousNonce, path);
+    previousNonce = nonce;
+    const document = await response.text();
+    if (response.status !== 307) {
+      const scripts = [...document.matchAll(/<script\b([^>]*)>/g)];
+      assert.ok(scripts.length, path);
+      for (const [, attributes] of scripts) assert.ok(attributes.includes(`nonce="${nonce}"`), `${path}: skrip tanpa nonce`);
+    }
+  }
+  for (const path of ["/offline.html", "/offline.css", "/sw.js"]) {
+    const response = await fetch(base+path);
+    assert.equal(response.status, 200);
+    assert.ok(response.headers.get("content-security-policy"));
+  }
   for (const path of ["/admin", "/admin/kategori", "/admin/ulasan", "/admin/produk/ekspor"]) assert.equal((await fetch(base+path, { redirect: "manual" })).status, 307);
   let html = await (await fetch(base+"/")).text(); assert.ok(html.includes("Kopi HTTP")); assert.ok(!html.includes("RAHASIA NONAKTIF"));
   let res = await fetch(base+"/produk/1"); html = await res.text(); assert.equal(res.status,200); assert.match(html, /property="og:title" content="Kopi HTTP"/); assert.match(html, /rel="canonical" href="https:\/\/beanstory.vercel.app\/produk\/1"/);
@@ -151,7 +176,7 @@ try {
   html = await (await fetch(base+"/bandingkan?ids=1,2")).text(); assert.ok(html.includes("Kopi HTTP") && html.includes("Teh HTTP"));
   html = await (await fetch(base+"/sitemap.xml")).text(); assert.ok(html.includes("/produk/1")); assert.ok(!html.includes("/produk/3"));
   res = await fetch(base+"/api/produk/seleksi", { method:"POST", body:JSON.stringify({ids:["1","3"]}) }); assert.deepEqual((await res.json()).produk.map((p)=>p.id),[1]);
-  html = await (await fetch(base+"/admin", {headers:{Cookie:cookie}})).text(); assert.ok(html.includes("RAHASIA NONAKTIF")); assert.match(html,/Seluruh produk:/);
+  html = await (await fetch(base+"/admin", {headers:{Cookie:cookie}})).text(); assert.ok(html.includes("RAHASIA NONAKTIF")); assert.match(html,/Seluruh produk:/); assert.ok(html.includes("Ekspor CSV"));
   const values = { nama:"Produk CRUD HTTP", harga:"30000", kategori:"Minuman", foto_url:"/produk/kopi.svg", deskripsi:"Uji HTTP", aktif:"true", stok:"4", harga_diskon:"25000", foto_tambahan:"", badge:"" };
   let result = await action("tambahProduk", [null,fd(values)]); assert.match(result.res.headers.get("x-action-redirect") || "", /status=created/);
   const baru = produk.find((p)=>p.nama===values.nama); assert.ok(baru);
@@ -167,13 +192,23 @@ try {
   await action("hapusKategori", ["Kategori HTTP",{},fd({})],"/admin/kategori"); assert.ok(!kategori.some((k)=>k.nama==="Kategori HTTP"));
   result = await action("kirimUlasan", ["1",{},fd({nama:"Pembeli HTTP",rating:"4",komentar:"Ulasan HTTP bagus",website:""})],"/produk/1",false); assert.ok(result.text.includes("sudah ditampilkan")); assert.equal(ulasan.length,1);
   html=await (await fetch(base+"/produk/1")).text(); assert.ok(html.includes("Ulasan HTTP bagus")); assert.ok(html.includes("4.0 / 5"));
+  await action("kirimUlasan", ["1",{},fd({nama:"Pembeli kedua",rating:"2",komentar:"Ulasan kedua HTTP",website:""})],"/produk/1",false);
+  html=await (await fetch(base+"/produk/1")).text(); assert.ok(html.includes("3.0 / 5 dari 2 ulasan"));
   await action("moderasiUlasan", [String(ulasan[0].id),"sembunyikan",{},fd({})],"/admin/ulasan"); assert.equal(ulasan[0].terlihat,false);
-  html=await (await fetch(base+"/produk/1")).text(); assert.ok(html.includes("Belum ada ulasan.")); assert.ok(!html.includes("Ulasan HTTP bagus"));
+  html=await (await fetch(base+"/produk/1")).text(); assert.ok(html.includes("2.0 / 5 dari 1 ulasan")); assert.ok(!html.includes("Ulasan HTTP bagus"));
   await action("moderasiUlasan", [String(ulasan[0].id),"tampilkan",{},fd({})],"/admin/ulasan"); assert.equal(ulasan[0].terlihat,true);
+  html=await (await fetch(base+"/produk/1")).text(); assert.ok(html.includes("3.0 / 5 dari 2 ulasan"));
+  await action("moderasiUlasan", [String(ulasan[1].id),"hapus",{},fd({})],"/admin/ulasan");
+  html=await (await fetch(base+"/produk/1")).text(); assert.ok(html.includes("4.0 / 5 dari 1 ulasan")); assert.ok(!html.includes("Ulasan kedua HTTP"));
   res=await fetch(base+"/api/klik-whatsapp",{method:"POST",headers:{Origin:base},body:JSON.stringify({ids:["1","1","2"]})}); assert.equal(res.status,204); assert.equal(klik.length,2); assert.deepEqual(Object.keys(klik[0]),["produk_id","created_at"]);
   await action("ubahStatusProduk", [String(baru.id),false,{},fd({})]); assert.equal(baru.aktif,false); assert.equal((await fetch(base+`/produk/${baru.id}`)).status,404);
   res=await fetch(base+"/admin/produk/ekspor",{headers:{Cookie:cookie}}); assert.equal(res.status,200); const bytes=new Uint8Array(await res.arrayBuffer()); assert.deepEqual(Array.from(bytes.slice(0,3)),[239,187,191]); assert.ok(new TextDecoder().decode(bytes).includes("RAHASIA NONAKTIF"));
   await action("hapusProduk", [String(baru.id),null,fd({})]); assert.ok(!produk.includes(baru)); assert.equal((await fetch(base+`/produk/${baru.id}`)).status,404);
+  for (const aksi of ["tambah", "ubah", "hapus"]) {
+    const events = log_admin.filter((log) => log.produk_id === baru.id && log.aksi === aksi);
+    assert.ok(events.length, `Log ${aksi} harus tersedia setelah CRUD`);
+    assert.ok(events.every((log) => log.admin_id === user.id && log.pelaku === user.email && Number.isFinite(Date.parse(log.created_at))));
+  }
   // US-41–US-50: alur baru melalui Server Action, SSR, dan API sebenarnya.
   for(const path of["/admin/banner","/admin/pengaturan","/admin/akun","/admin/aktivitas","/admin/produk/impor","/admin/produk/1/varian"])assert.equal((await fetch(base+path,{redirect:"manual"})).status,307,path);
   html=await(await fetch(base+"/admin",{headers:{Cookie:cookie}})).text();assert.ok(html.replace(/<!--[\s\S]*?-->/g,"").includes("1 klik"));

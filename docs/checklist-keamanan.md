@@ -11,3 +11,6 @@ Cek semua poin ini sebelum mengumpulkan karya. Poin ini juga dipakai saat penila
 - [ ] RLS di tabel `produk` aktif (Supabase > Table Editor > produk: tidak ada label "RLS disabled").
 - [ ] Tidak ada email, password, atau kunci yang ditulis di kode.
 - [ ] (Bonus) Aksi tambah, ubah, dan hapus produk ditolak jika tidak login.
+- [ ] Header live pada katalog, detail, login, redirect admin, dan 404 memuat `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `X-Frame-Options: DENY`, dan CSP dengan `frame-ancestors 'none'`.
+- [ ] CSP Production memakai nonce baru per request; tidak ada `unsafe-inline`/`unsafe-eval`. Reload tema, navigasi, dan form admin berfungsi tanpa error CSP di Console.
+- [ ] Pemeriksaan RPC moderasi dan trigger log melalui `docs/verifikasi-penilaian.sql` sesuai; uji CRUD dan moderasi pada aplikasi live sudah dilakukan sebagaimana `docs/perbaikan-penilaian.md`.

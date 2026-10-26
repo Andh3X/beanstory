@@ -6,6 +6,9 @@ export default async function UlasanProduk({ id, halaman: permintaan }) {
   let daftar = [], jumlah = 0, rata = 0, halaman = 1, jumlahHalaman = 1, gagal = false;
   try {
     const supabase = createServerClient();
+    // US-39: SQL ringkasan_ulasan (docs/migrations/002-us21-us40.sql)
+    // memakai WHERE p.aktif AND u.terlihat, sehingga count/avg tidak menghitung
+    // ulasan tersembunyi. Daftar di bawah memakai filter terlihat yang sama.
     const ringkasan = await supabase.rpc("ringkasan_ulasan", { p_produk_id: String(id) });
     if (ringkasan.error || !ringkasan.data?.[0]) throw new Error();
     jumlah = Number(ringkasan.data[0].jumlah); rata = Number(ringkasan.data[0].rata_rata);

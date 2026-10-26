@@ -5,6 +5,7 @@ import PasangAplikasi from "@/components/PasangAplikasi";
 import { ambilToko } from "@/lib/toko-server";
 import PilihanProvider from "@/components/PilihanProvider";
 import { siteUrl } from "@/lib/site";
+import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata() {
@@ -21,11 +22,12 @@ export async function generateMetadata() {
 export const viewport = { themeColor: "#1f6b4f" };
 
 export default async function RootLayout({ children }) {
+  const nonce = (await headers()).get("x-nonce");
   const toko=await ambilToko();
   return (
     <html lang="id" suppressHydrationWarning>
       <head>
-        <script src="/theme-init.js" />
+        <script nonce={nonce} src="/theme-init.js" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link

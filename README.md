@@ -68,6 +68,8 @@ Urutan yang disarankan: US-01, US-02, US-03, US-04, US-05, US-06, lalu fitur bon
 
 ## Sebelum mengumpulkan
 
+Perbaikan hasil penilaian 535/600 mencakup **Ekspor CSV**, CSP bernonce/header keamanan, dan jurnal wajib. Bukti US-39 berada pada filter `u.terlihat` dalam RPC migrasi 002; US-45 dicatat secara atomik oleh trigger `log_perubahan_produk` migrasi 003. Baca [panduan pembuktian dan deployment](docs/perbaikan-penilaian.md), lalu jalankan pemeriksaan baca saja [verifikasi-penilaian.sql](docs/verifikasi-penilaian.sql) di SQL Editor untuk memastikan definisi yang terpasang sesuai kode. Tidak ada migrasi baru untuk audit ini.
+
 US-41–US-50 tersedia di kode. **Terapkan migrasi 003 sebelum deployment** agar pemeriksaan admin aktif, varian, dan urutan dapat bekerja. Langkah SQL Editor, fitur, perubahan akses admin, serta hasil pengujian ada di [docs/bonus-us41-us50.md](docs/bonus-us41-us50.md).
 
 Bonus US-21–US-40 (keranjang, favorit, tema, SEO, kategori/upload, ulasan/moderasi, klik WhatsApp) tersedia di kode. **Jalankan migrasi 002 sebelum deployment kode baru.** Ikuti [panduan aktivasi dan pengujian](docs/bonus-us21-us40.md); migrasi live dan pemeriksaan Production belum dilakukan agent. Pilihan browser tidak menyimpan harga/stok, seluruh akses database tetap melalui server.
